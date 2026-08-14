@@ -413,6 +413,11 @@ func redactAccountManagedExtra(extra map[string]any) map[string]any {
 			service.OllamaCloudUsageAutoRefreshExtraKey,
 			service.OllamaCloudUsageSnapshotExtraKey:
 			continue
+		case "email", "email_address":
+			if extra["import_source"] == "encrypted_bundle" {
+				continue
+			}
+			redacted[key] = value
 		default:
 			redacted[key] = value
 		}

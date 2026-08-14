@@ -18,6 +18,8 @@ import type {
   AdminDataImportResult,
   CodexSessionImportRequest,
   CodexSessionImportResult,
+  EncryptedAccountImportPublicKey,
+  EncryptedAccountImportRequest,
   OpenAICodexPATCreateRequest,
   CheckMixedChannelRequest,
   CheckMixedChannelResponse,
@@ -680,6 +682,24 @@ export async function importCodexSession(payload: CodexSessionImportRequest): Pr
   return data
 }
 
+export async function getEncryptedImportPublicKey(): Promise<EncryptedAccountImportPublicKey> {
+  const { data } = await apiClient.get<EncryptedAccountImportPublicKey>(
+    '/admin/accounts/import/encrypted/public-key'
+  )
+  return data
+}
+
+export async function importEncryptedAccounts(
+  payload: EncryptedAccountImportRequest
+): Promise<CodexSessionImportResult> {
+  const { data } = await apiClient.post<CodexSessionImportResult>(
+    '/admin/accounts/import/encrypted',
+    payload,
+    { timeout: 120000 }
+  )
+  return data
+}
+
 export async function createOpenAICodexPAT(payload: OpenAICodexPATCreateRequest): Promise<Account> {
   const { data } = await apiClient.post<Account>('/admin/openai/create-from-codex-pat', payload)
   return data
@@ -1022,6 +1042,8 @@ export const accountsAPI = {
   exportData,
   importData,
   importCodexSession,
+  getEncryptedImportPublicKey,
+  importEncryptedAccounts,
   createOpenAICodexPAT,
   getAntigravityDefaultModelMapping,
   batchDelete,

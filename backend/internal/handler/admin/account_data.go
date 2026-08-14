@@ -10,6 +10,8 @@ import (
 
 	"log/slog"
 
+	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accountimport"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
@@ -199,13 +201,19 @@ func (h *AccountHandler) ExportData(c *gin.Context) {
 			v := acc.ExpiresAt.Unix()
 			expiresAt = &v
 		}
+		creds := acc.Credentials
+		extra := acc.Extra
+		if isEncryptedBundleAccount(acc) {
+			creds, _ = dto.RedactCredentials(acc.Credentials)
+			extra = redactEncryptedBundleExportExtra(acc.Extra)
+		}
 		dataAccounts = append(dataAccounts, DataAccount{
 			Name:               acc.Name,
 			Notes:              acc.Notes,
 			Platform:           acc.Platform,
 			Type:               acc.Type,
-			Credentials:        acc.Credentials,
-			Extra:              acc.Extra,
+			Credentials:        creds,
+			Extra:              extra,
 			ProxyKey:           proxyKey,
 			Concurrency:        acc.Concurrency,
 			Priority:           acc.Priority,
@@ -778,4 +786,28 @@ func normalizeProxyStatus(status string) string {
 	default:
 		return normalized
 	}
+}
+
+func isEncryptedBundleAccount(acc service.Account) bool {
+	if acc.Extra == nil {
+		return false
+	}
+	source, _ := acc.Extra[accountimport.ExtraImportSourceKey].(string)
+	return source == accountimport.ImportSource
+}
+
+func redactEncryptedBundleExportExtra(extra map[string]any) map[string]any {
+	if extra == nil {
+		return nil
+	}
+	out := make(map[string]any, len(extra))
+	for key, value := range extra {
+		switch key {
+		case "email", "email_address":
+			continue
+		default:
+			out[key] = value
+		}
+	}
+	return out
 }

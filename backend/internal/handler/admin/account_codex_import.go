@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/accountimport"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -497,11 +498,13 @@ func normalizeCodexImportEntry(entry codexImportEntry) (*codexImportAccount, err
 			"imported_at":   now.Format(time.RFC3339),
 		},
 	}
+	var encryptedMeta map[string]any
 
 	switch raw := entry.Value.(type) {
 	case string:
 		item.AccessToken = strings.TrimSpace(raw)
 	case map[string]any:
+		encryptedMeta = takeEncryptedImportMeta(raw)
 		if agentIdentity, ok := firstCodexMap(raw, []string{"agent_identity"}, []string{"agentIdentity"}); ok || strings.EqualFold(firstCodexString(raw, []string{"auth_mode"}, []string{"authMode"}), service.OpenAIAuthModeAgentIdentity) {
 			if !ok {
 				agentIdentity = raw
@@ -535,6 +538,7 @@ func normalizeCodexImportEntry(entry codexImportEntry) (*codexImportAccount, err
 			}
 			item.IdentityKeys = buildCodexAgentIdentityKeys(item.AccountID)
 			item.Name = buildCodexImportAccountName(item, entry.Index)
+			applyEncryptedImportMeta(item, encryptedMeta, entry.Index)
 			return item, nil
 		}
 		item.AccessToken = firstCodexString(raw,
@@ -653,8 +657,41 @@ func normalizeCodexImportEntry(entry codexImportEntry) (*codexImportAccount, err
 	item.Extra["access_token_sha256"] = fingerprint
 	item.IdentityKeys = buildCodexImportIdentityKeys(item.AccountID, item.UserID, item.Email, item.AccessToken, item.RefreshToken)
 	item.Name = buildCodexImportAccountName(item, entry.Index)
+	applyEncryptedImportMeta(item, encryptedMeta, entry.Index)
 
 	return item, nil
+}
+
+func takeEncryptedImportMeta(raw map[string]any) map[string]any {
+	if raw == nil {
+		return nil
+	}
+	value, ok := raw[accountimport.EncryptedImportMetaKey]
+	if !ok {
+		return nil
+	}
+	delete(raw, accountimport.EncryptedImportMetaKey)
+	meta, _ := value.(map[string]any)
+	return meta
+}
+
+func applyEncryptedImportMeta(item *codexImportAccount, meta map[string]any, index int) {
+	if item == nil || len(meta) == 0 {
+		return
+	}
+	importID := strings.TrimSpace(codexStringValue(meta["id"]))
+	alias := strings.TrimSpace(codexStringValue(meta["name"]))
+	item.Extra[accountimport.ExtraImportSourceKey] = accountimport.ImportSource
+	if importID != "" {
+		item.Extra[accountimport.ExtraImportIDKey] = importID
+		item.IdentityKeys = append([]string{"import:" + importID}, item.IdentityKeys...)
+	}
+	if kid := strings.TrimSpace(codexStringValue(meta["kid"])); kid != "" {
+		item.Extra[accountimport.ExtraImportKIDKey] = kid
+	}
+	delete(item.Extra, "email")
+	delete(item.Extra, "email_address")
+	item.Name = accountimport.SafeDisplayName(alias, importID, item.AccountID, index)
 }
 
 func enrichCodexImportAccountFromJWT(item *codexImportAccount, token string, validateExpiry bool, now time.Time) error {
@@ -959,6 +996,9 @@ func (i *codexAccountIndex) Add(account service.Account) {
 		codexCredentialString(account.Credentials, "email"),
 		codexCredentialString(account.Credentials, "access_token"),
 	)
+	if importID := strings.TrimSpace(codexCredentialString(account.Extra, "encrypted_import_id")); importID != "" {
+		keys = append([]string{"import:" + importID}, keys...)
+	}
 	orderedKeys := make([]string, 0, len(keys)+1)
 	accountKeys := make(map[string]struct{}, len(keys)+1)
 	for _, key := range keys {

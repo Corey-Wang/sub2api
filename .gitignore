@@ -136,6 +136,9 @@ docs/*
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/ASYNC_IMAGE_TASKS.md
+!docs/ENCRYPTED_ACCOUNT_IMPORT.md
+!docs/fixtures/
+!docs/fixtures/*
 !docs/legal/
 !docs/legal/*.md
 .serena/

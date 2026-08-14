@@ -1040,6 +1040,19 @@ totp:
   encryption_key: ""
 
 # =============================================================================
+# Encrypted ChatGPT / OpenAI account import
+# 加密账号导入（卖方加密 → 客户现场解密入库）
+# =============================================================================
+# Generate a keypair with:
+#   go run ./cmd/encrypt-accounts gen-keypair
+# Put ONLY the private key here (or ACCOUNT_IMPORT_PRIVATE_KEY). The admin UI
+# publishes the derived public key for the seller. Never put the private key
+# in the frontend or hand it to on-site staff.
+# 用 encrypt-accounts gen-keypair 生成密钥对，只把私钥配在服务端。
+account_import:
+  private_key: ""
+
+# =============================================================================
 # LinuxDo Connect OAuth Login (SSO)
 # LinuxDo Connect OAuth 登录（用于 Sub2API 用户登录）
 # =============================================================================

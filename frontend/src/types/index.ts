@@ -1609,6 +1609,25 @@ export interface CodexSessionImportResult {
   errors?: CodexSessionImportMessage[]
 }
 
+export interface EncryptedAccountImportPublicKey {
+  configured: boolean
+  kind: string
+  version: number
+  alg: string
+  kid?: string
+  public_key?: string
+}
+
+export interface EncryptedAccountImportRequest {
+  content?: string
+  contents?: string[]
+  bundle?: unknown
+  name?: string
+  group_ids?: number[]
+  update_existing?: boolean
+  skip_default_group_bind?: boolean
+}
+
 // ==================== Usage & Redeem Types ====================
 
 export type RedeemCodeType = 'balance' | 'concurrency' | 'subscription' | 'invitation'

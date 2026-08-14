@@ -1,0 +1,20 @@
+[
+  {
+    "id": "desk-001",
+    "name": "门店A-1",
+    "platform": "openai",
+    "type": "oauth",
+    "access_token": "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ1c2VyLWZha2UtMSIsImV4cCI6NDEwMjQ0NDgwMCwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7ImNoYXRncHRfYWNjb3VudF9pZCI6ImFjY3QtZmFrZS0xIn19.",
+    "refresh_token": "rt-fake-not-a-real-secret",
+    "chatgpt_account_id": "acct-fake-1",
+    "chatgpt_user_id": "user-fake-1"
+  },
+  {
+    "id": "desk-002",
+    "name": "门店A-2",
+    "access_token": "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ1c2VyLWZha2UtMiIsImV4cCI6NDEwMjQ0NDgwMCwiaHR0cHM6Ly9hcGkub3BlbmFpLmNvbS9hdXRoIjp7ImNoYXRncHRfYWNjb3VudF9pZCI6ImFjY3QtZmFrZS0yIn19.",
+    "refresh_token": "rt-fake-second-account",
+    "chatgpt_account_id": "acct-fake-2",
+    "chatgpt_user_id": "user-fake-2"
+  }
+]
