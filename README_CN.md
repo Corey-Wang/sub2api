@@ -193,6 +193,7 @@ Sub2API 是一个 AI API 网关平台，用于分发和管理 AI 产品订阅的
 - **速率限制** - 可配置的请求和 Token 速率限制
 - **内置支付系统** - 支持 EasyPay 易支付、支付宝官方、微信官方、Stripe，用户自助充值，无需独立部署支付服务（[配置指南](docs/PAYMENT_CN.md)）
 - **管理后台** - Web 界面进行监控和管理
+- **加密导入 ChatGPT 账号** - 卖方用实例公钥加密 OpenAI/Codex OAuth 账号，客户现场管理员批量导入且看不到明文令牌（[说明](docs/ENCRYPTED_ACCOUNT_IMPORT.md)）
 - **外部系统集成** - 支持通过 iframe 嵌入外部系统（如工单等），扩展管理后台功能
 
 ## 生态项目

@@ -16,6 +16,12 @@
             @refresh="handleManualRefresh"
             @create="showCreate = true"
           >
+            <template #afterCreate>
+              <button class="btn btn-secondary" type="button" @click="openEncryptedImport">
+                <Icon name="lock" size="sm" class="md:mr-1.5" />
+                <span class="hidden md:inline">{{ t('admin.accounts.encryptedImport') }}</span>
+              </button>
+            </template>
             <template #after>
               <!-- Auto Refresh Dropdown -->
               <div class="relative" ref="autoRefreshDropdownRef">
@@ -93,6 +99,12 @@
                           <Icon name="sync" size="sm" />
                         </span>
                         <span class="flex-1 text-left">{{ t('admin.accounts.syncFromCrs') }}</span>
+                      </button>
+                      <button class="account-tools-menu-item" @click="openEncryptedImport">
+                        <span class="account-tools-menu-icon bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
+                          <Icon name="lock" size="sm" />
+                        </span>
+                        <span class="flex-1 text-left">{{ t('admin.accounts.encryptedImport') }}</span>
                       </button>
                       <button class="account-tools-menu-item" @click="openImportData">
                         <span class="account-tools-menu-icon bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
@@ -243,7 +255,13 @@
               </HelpTooltip>
               <span v-else class="font-medium text-gray-900 dark:text-white">{{ value }}</span>
               <span
-                v-if="accountDisplayEmail(row)"
+                v-if="isEncryptedImportedAccount(row)"
+                class="mt-0.5 inline-flex w-fit rounded bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+              >
+                {{ t('admin.accounts.encryptedImportBadge') }}
+              </span>
+              <span
+                v-else-if="accountDisplayEmail(row)"
                 class="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[200px]"
                 :title="accountDisplayEmail(row) + (row.parent_chatgpt_account_id ? ' · ' + row.parent_chatgpt_account_id : '')"
               >
@@ -459,6 +477,7 @@
     <AccountActionMenu :show="menu.show" :account="menu.acc" :position="menu.pos" @close="menu.show = false" @test="handleTest" @stats="handleViewStats" @schedule="handleSchedule" @duplicate="handleDuplicateAccount" @reauth="handleReAuth" @refresh-token="handleRefresh" @recover-state="handleRecoverState" @reset-quota="handleResetQuota" @set-privacy="handleSetPrivacy" @create-spark-shadow="handleCreateSparkShadow" />
     <SyncFromCrsModal :show="showSync" @close="showSync = false" @synced="reload" />
     <ImportDataModal :show="showImportData" @close="showImportData = false" @imported="handleDataImported" />
+    <EncryptedImportModal :show="showEncryptedImport" @close="showEncryptedImport = false" @imported="handleEncryptedImported" />
     <BulkEditAccountModal
       :show="showBulkEdit"
       :account-ids="selIds"
@@ -509,6 +528,7 @@ import AccountTableFilters from '@/components/admin/account/AccountTableFilters.
 import AccountBulkActionsBar from '@/components/admin/account/AccountBulkActionsBar.vue'
 import AccountActionMenu from '@/components/admin/account/AccountActionMenu.vue'
 import ImportDataModal from '@/components/admin/account/ImportDataModal.vue'
+import EncryptedImportModal from '@/components/admin/account/EncryptedImportModal.vue'
 import ReAuthAccountModal from '@/components/admin/account/ReAuthAccountModal.vue'
 import AccountTestModal from '@/components/admin/account/AccountTestModal.vue'
 import AccountStatsModal from '@/components/admin/account/AccountStatsModal.vue'
@@ -585,6 +605,7 @@ const showCreate = ref(false)
 const showEdit = ref(false)
 const showSync = ref(false)
 const showImportData = ref(false)
+const showEncryptedImport = ref(false)
 const showExportDataDialog = ref(false)
 const includeProxyOnExport = ref(true)
 const showBulkEdit = ref(false)
@@ -1267,6 +1288,7 @@ const isAnyModalOpen = computed(() => {
     showEdit.value ||
     showSync.value ||
     showImportData.value ||
+    showEncryptedImport.value ||
     showExportDataDialog.value ||
     showBulkEdit.value ||
     showTempUnsched.value ||
@@ -1431,6 +1453,11 @@ const openSyncFromCrs = () => {
 const openImportData = () => {
   closeAccountToolsDropdown()
   showImportData.value = true
+}
+
+const openEncryptedImport = () => {
+  closeAccountToolsDropdown()
+  showEncryptedImport.value = true
 }
 
 const openExportDataDialogFromMenu = () => {
@@ -1619,7 +1646,12 @@ function getAntigravityTierLabel(row: any): string | null {
 
 // 账号显示邮箱:优先账号自身(extra/credentials),影子账号回退母账号 parent_email。
 // 供名称单元格 v-if/标题/文本三处共用,避免同一回退链在模板里重复三次。
+function isEncryptedImportedAccount(row: any): boolean {
+  return row?.extra?.import_source === 'encrypted_bundle'
+}
+
 function accountDisplayEmail(row: any): string {
+  if (isEncryptedImportedAccount(row)) return ''
   return row.extra?.email_address || row.extra?.email || row.credentials?.email || row.parent_email || ''
 }
 
@@ -2052,6 +2084,7 @@ const handleBulkUpdated = () => {
   reload()
 }
 const handleDataImported = () => { showImportData.value = false; reload() }
+const handleEncryptedImported = () => { showEncryptedImport.value = false; reload() }
 const ACCOUNT_UNGROUPED_GROUP_QUERY_VALUE = 'ungrouped'
 const ACCOUNT_PRIVACY_MODE_UNSET_QUERY_VALUE = '__unset__'
 const buildAccountQueryFilters = () => ({

@@ -99,6 +99,16 @@ type Config struct {
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
 	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
 	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
+	AccountImport           AccountImportConfig           `mapstructure:"account_import"`
+}
+
+// AccountImportConfig holds the instance keypair used to decrypt seller
+// account bundles. Only the private key is configured; the public key is
+// derived at runtime and published to admins.
+type AccountImportConfig struct {
+	// PrivateKey is a raw-url-base64 32-byte X25519 scalar.
+	// Environment: ACCOUNT_IMPORT_PRIVATE_KEY
+	PrivateKey string `mapstructure:"private_key"`
 }
 
 type LogConfig struct {
@@ -2176,6 +2186,9 @@ func setDefaults() {
 
 	// TOTP
 	viper.SetDefault("totp.encryption_key", "")
+
+	// Encrypted ChatGPT/OpenAI account import (seller → on-prem)
+	viper.SetDefault("account_import.private_key", "")
 
 	// Default
 	// Admin credentials are created via the setup flow (web wizard / CLI / AUTO_SETUP).

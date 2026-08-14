@@ -12,6 +12,8 @@ var SensitiveCredentialKeys = []string{
 	// 云服务凭据
 	"aws_secret_access_key", "aws_session_token",
 	"service_account_json", "service_account", "private_key",
+	// Account identity that must not appear in admin API JSON
+	"email",
 }
 
 var sensitiveCredentialKeySet = func() map[string]struct{} {
