@@ -167,7 +167,8 @@ watch(
       publicKeyInfo.value = { configured: false, kind: '', version: 1, alg: '' }
       appStore.showError(error?.message || t('admin.accounts.encryptedImportKeyMissing'))
     }
-  }
+  },
+  { immediate: true }
 )
 
 const openFilePicker = () => fileInput.value?.click()

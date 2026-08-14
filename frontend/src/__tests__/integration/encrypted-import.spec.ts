@@ -60,8 +60,10 @@ describe('EncryptedImportModal', () => {
     const wrapper = mountModal()
     await flushPromises()
     expect(getEncryptedImportPublicKey).toHaveBeenCalled()
-    expect(wrapper.text()).toContain('pub-key-material')
-    expect(wrapper.text()).not.toContain('ACCOUNT_IMPORT_PRIVATE_KEY')
+    const publicKeyField = wrapper.findAll('textarea').find((node) => node.attributes('readonly') !== undefined)
+    expect(publicKeyField?.element.value).toBe('pub-key-material')
+    expect(wrapper.text()).toContain('sha256:abc')
+    expect(wrapper.html()).not.toContain('ACCOUNT_IMPORT_PRIVATE_KEY')
   })
 
   it('requires a file or paste before importing', async () => {
