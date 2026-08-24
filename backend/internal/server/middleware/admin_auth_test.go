@@ -123,6 +123,51 @@ func TestAdminAuthJWTValidatesTokenVersion(t *testing.T) {
 	})
 }
 
+func TestAdminAuthJWTAllowsReadOnlyAdmin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{JWT: config.JWTConfig{Secret: "test-secret", ExpireHour: 1}}
+	authService := service.NewAuthService(nil, nil, nil, nil, cfg, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	readOnlyAdmin := &service.User{
+		ID:           7,
+		Email:        "readonly@example.com",
+		Role:         service.RoleReadOnlyAdmin,
+		Status:       service.StatusActive,
+		TokenVersion: 1,
+		Concurrency:  1,
+	}
+	userRepo := &stubUserRepo{
+		getByID: func(ctx context.Context, id int64) (*service.User, error) {
+			if id != readOnlyAdmin.ID {
+				return nil, service.ErrUserNotFound
+			}
+			clone := *readOnlyAdmin
+			return &clone, nil
+		},
+	}
+	userService := service.NewUserService(userRepo, nil, nil, nil)
+
+	router := gin.New()
+	router.Use(gin.HandlerFunc(NewAdminAuthMiddleware(authService, userService, nil, nil)))
+	router.GET("/admin-read", func(c *gin.Context) {
+		role, ok := GetUserRoleFromContext(c)
+		require.True(t, ok)
+		require.Equal(t, service.RoleReadOnlyAdmin, role)
+		c.Status(http.StatusOK)
+	})
+
+	token, err := authService.GenerateToken(context.Background(), readOnlyAdmin)
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/admin-read", nil)
+	request.Header.Set("Authorization", "Bearer "+token)
+	router.ServeHTTP(recorder, request)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+}
+
 type stubUserRepo struct {
 	getByID func(ctx context.Context, id int64) (*service.User, error)
 }

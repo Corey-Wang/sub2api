@@ -1,4 +1,9 @@
 export default {
+    readOnlyAdmin: {
+      title: '只读管理员模式',
+      description: '你可以查看管理数据，但不能创建、编辑、删除或执行其他管理变更。',
+      writeBlocked: '只读管理员不能执行管理变更。'
+    },
     // Dashboard
     dashboard: {
       title: '管理控制台',
@@ -559,6 +564,7 @@ export default {
       deleteConfirm: "确定要删除用户 '{email}' 吗？此操作无法撤销。",
       roles: {
         admin: '管理员',
+        readonly_admin: '只读管理员',
         user: '用户'
       },
       form: {

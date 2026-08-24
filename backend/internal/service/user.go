@@ -68,6 +68,23 @@ func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
 
+// IsReadOnlyAdmin reports whether the user can access the administration
+// console but must not mutate administrative resources.
+func (u *User) IsReadOnlyAdmin() bool {
+	return u != nil && u.Role == RoleReadOnlyAdmin
+}
+
+// IsAdminRole reports whether a role can enter the administration console.
+func IsAdminRole(role string) bool {
+	return role == RoleAdmin || role == RoleReadOnlyAdmin
+}
+
+// CanAccessAdmin reports whether the user has either the full administrator
+// role or the read-only administrator role.
+func (u *User) CanAccessAdmin() bool {
+	return u != nil && IsAdminRole(u.Role)
+}
+
 func (u *User) IsActive() bool {
 	return u.Status == StatusActive
 }

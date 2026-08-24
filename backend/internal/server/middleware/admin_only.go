@@ -16,7 +16,8 @@ func AdminOnly() gin.HandlerFunc {
 			return
 		}
 
-		// 检查是否为管理员
+		// AdminOnly 保留“完整管理员”语义；需要同时允许只读管理员的
+		// 查询路由应使用 AdminAuth + ReadOnlyAdminGuard。
 		if role != service.RoleAdmin {
 			AbortWithError(c, 403, "FORBIDDEN", "Admin access required")
 			return

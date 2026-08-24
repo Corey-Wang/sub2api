@@ -143,21 +143,12 @@ apiClient.interceptors.response.use(
         })
       }
 
-      if (status === 423 && apiData.code === 'ADMIN_COMPLIANCE_ACK_REQUIRED') {
+      if (status === 403 && apiData.code === 'READ_ONLY_ADMIN') {
         try {
-          window.dispatchEvent(new CustomEvent('admin-compliance-required', {
-            detail: apiData.metadata || {}
-          }))
+          window.dispatchEvent(new CustomEvent('read-only-admin-blocked'))
         } catch {
           // ignore event failures
         }
-
-        return Promise.reject({
-          status,
-          code: apiData.code,
-          message: apiData.message || error.message,
-          metadata: apiData.metadata,
-        })
       }
 
       // 401: Try to refresh the token if we have a refresh token

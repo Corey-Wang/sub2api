@@ -16,6 +16,14 @@
 
       <!-- Main Content -->
       <main class="p-4 md:p-6 lg:p-8">
+        <div
+          v-if="authStore.isReadOnlyAdmin && routeIsAdmin"
+          class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200"
+          role="status"
+        >
+          <div class="font-semibold">{{ t('admin.readOnlyAdmin.title') }}</div>
+          <div class="mt-1">{{ t('admin.readOnlyAdmin.description') }}</div>
+        </div>
         <slot />
       </main>
     </div>
@@ -25,6 +33,8 @@
 <script setup lang="ts">
 import '@/styles/onboarding.css'
 import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
 import { useOnboardingTour } from '@/composables/useOnboardingTour'
@@ -34,8 +44,11 @@ import AppHeader from './AppHeader.vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
+const route = useRoute()
+const { t } = useI18n()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
-const isAdmin = computed(() => authStore.user?.role === 'admin')
+const isAdmin = computed(() => authStore.isAdmin)
+const routeIsAdmin = computed(() => route.path === '/admin' || route.path.startsWith('/admin/'))
 
 const { replayTour } = useOnboardingTour({
   storageKey: isAdmin.value ? 'admin_guide' : 'user_guide',
