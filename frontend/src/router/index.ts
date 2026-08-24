@@ -32,11 +32,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/home',
     name: 'Home',
-    component: () => import('@/views/HomeView.vue'),
-    meta: {
-      requiresAuth: false,
-      title: 'Home'
-    }
+    redirect: '/login'
   },
   {
     path: '/login',
@@ -161,7 +157,7 @@ const routes: RouteRecordRaw[] = [
     name: 'KeyUsage',
     component: () => import('@/views/KeyUsageView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       title: 'Key Usage',
     }
   },
@@ -170,7 +166,7 @@ const routes: RouteRecordRaw[] = [
     name: 'LegalDocument',
     component: () => import('@/views/public/LegalDocumentView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       title: 'Legal Document'
     }
   },
@@ -179,7 +175,7 @@ const routes: RouteRecordRaw[] = [
     name: 'ModelPlaza',
     component: () => import('@/views/ModelPlazaView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       title: 'Model Plaza',
       titleKey: 'modelPlaza.title'
     }
@@ -188,7 +184,7 @@ const routes: RouteRecordRaw[] = [
   // ==================== User Routes ====================
   {
     path: '/',
-    redirect: '/home'
+    redirect: '/login'
   },
   {
     path: '/dashboard',
@@ -341,7 +337,7 @@ const routes: RouteRecordRaw[] = [
     name: 'PaymentResult',
     component: () => import('@/views/user/PaymentResultView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       requiresAdmin: false,
       title: 'Payment Result',
       titleKey: 'payment.result.success',
@@ -353,7 +349,7 @@ const routes: RouteRecordRaw[] = [
     name: 'StripePayment',
     component: () => import('@/views/user/StripePaymentView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       requiresAdmin: false,
       title: 'Stripe Payment',
       titleKey: 'payment.stripePay',
@@ -365,7 +361,7 @@ const routes: RouteRecordRaw[] = [
     name: 'AirwallexPayment',
     component: () => import('@/views/user/AirwallexPaymentView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       requiresAdmin: false,
       title: 'Airwallex Payment',
       titleKey: 'payment.airwallexPay',
@@ -377,7 +373,7 @@ const routes: RouteRecordRaw[] = [
     name: 'StripePopup',
     component: () => import('@/views/user/StripePopupView.vue'),
     meta: {
-      requiresAuth: false,
+      requiresAuth: true,
       requiresAdmin: false,
       title: 'Payment',
       requiresPayment: false
@@ -737,7 +733,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal']
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/setup']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',
@@ -816,38 +812,7 @@ router.beforeEach(async (to, _from, next) => {
       next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
       return
     }
-    // Model Plaza:公开路由但受「启用开关 + 可选强制登录」双重控制(后端同口径 fail-closed)
-    if (to.path === '/model-plaza') {
-      if (!appStore.publicSettingsLoaded) {
-        try {
-          await appStore.fetchPublicSettings()
-        } catch (error) {
-          console.warn('Failed to load public settings in route guard', error)
-        }
-      }
-      const plazaSettings = appStore.cachedPublicSettings
-      // 仅在设置成功加载且明确为 false 时拦截(瞬时加载失败视为未知,由后端 404 兜底)
-      if (appStore.publicSettingsLoaded && plazaSettings?.model_plaza_enabled === false) {
-        next(
-          authStore.isAuthenticated
-            ? authStore.isAdmin
-              ? '/admin/dashboard'
-              : '/dashboard'
-            : '/home'
-        )
-        return
-      }
-      if (plazaSettings?.model_plaza_require_auth === true && !authStore.isAuthenticated) {
-        next({ path: '/login', query: { redirect: to.fullPath } })
-        return
-      }
-      // Backend mode:登录的非管理员也不可见(匿名由下方公共拦截处理,广场不在白名单)
-      if (appStore.backendModeEnabled && authStore.isAuthenticated && !authStore.isAdmin) {
-        next('/login')
-        return
-      }
-    }
-    // Backend mode: block public pages for unauthenticated users (except login, key-usage, setup)
+    // Backend mode: block public pages for unauthenticated users (except login and setup)
     if (appStore.backendModeEnabled && !authStore.isAuthenticated) {
       const isAllowed = isBackendModePublicRouteAllowed(to.path, authStore.hasPendingAuthSession)
       if (!isAllowed) {
@@ -867,6 +832,22 @@ router.beforeEach(async (to, _from, next) => {
       query: { redirect: to.fullPath } // Save intended destination
     })
     return
+  }
+
+  // Model Plaza remains feature-gated, but is now only reachable after login.
+  if (to.path === '/model-plaza') {
+    if (!appStore.publicSettingsLoaded) {
+      try {
+        await appStore.fetchPublicSettings()
+      } catch (error) {
+        console.warn('Failed to load public settings in route guard', error)
+      }
+    }
+    // Only an explicitly loaded false value disables the route.
+    if (appStore.publicSettingsLoaded && appStore.cachedPublicSettings?.model_plaza_enabled === false) {
+      next(authStore.isAdmin ? '/admin/dashboard' : '/dashboard')
+      return
+    }
   }
 
   // Check admin requirement

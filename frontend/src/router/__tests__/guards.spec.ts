@@ -84,7 +84,7 @@ function simulateGuard(
       return authState.isAdmin ? '/admin/dashboard' : '/dashboard'
     }
     if (authState.backendModeEnabled && !authState.isAuthenticated) {
-      const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+      const allowed = ['/login', '/setup']
       const callbackPaths = [
         '/auth/callback',
         '/auth/linuxdo/callback',
@@ -133,7 +133,7 @@ function simulateGuard(
     if (authState.isAuthenticated && authState.isAdmin) {
       return null
     }
-    const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
+    const allowed = ['/login', '/setup']
     const callbackPaths = [
       '/auth/callback',
       '/auth/linuxdo/callback',
@@ -185,9 +185,9 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
-    it('访问 /home 公开页面允许通过', () => {
-      const redirect = simulateGuard('/home', { requiresAuth: false }, authState)
-      expect(redirect).toBeNull()
+    it('访问已移除的 /home 页面重定向到 /login', () => {
+      const redirect = simulateGuard('/home', {}, authState)
+      expect(redirect).toBe('/login')
     })
   })
 
@@ -360,7 +360,7 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
-    it('unauthenticated: /key-usage is allowed', () => {
+    it('unauthenticated: /key-usage redirects to /login', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
         isAdmin: false,
@@ -368,8 +368,8 @@ describe('路由守卫逻辑', () => {
         backendModeEnabled: true,
         hasPendingAuthSession: false,
       }
-      const redirect = simulateGuard('/key-usage', { requiresAuth: false }, authState)
-      expect(redirect).toBeNull()
+      const redirect = simulateGuard('/key-usage', {}, authState)
+      expect(redirect).toBe('/login')
     })
 
     it('unauthenticated: /setup is allowed', () => {
@@ -458,7 +458,7 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
-    it('non-admin authenticated: /key-usage is allowed', () => {
+    it('non-admin authenticated: /key-usage redirects to /login in backend mode', () => {
       const authState: MockAuthState = {
         isAuthenticated: true,
         isAdmin: false,
@@ -466,8 +466,8 @@ describe('路由守卫逻辑', () => {
         backendModeEnabled: true,
         hasPendingAuthSession: false,
       }
-      const redirect = simulateGuard('/key-usage', { requiresAuth: false }, authState)
-      expect(redirect).toBeNull()
+      const redirect = simulateGuard('/key-usage', {}, authState)
+      expect(redirect).toBe('/login')
     })
 
     it('unauthenticated: callback routes are allowed', () => {
@@ -494,7 +494,7 @@ describe('路由守卫逻辑', () => {
       expect(redirect).toBeNull()
     })
 
-    it('unauthenticated: /payment/result is allowed', () => {
+    it('unauthenticated: /payment/result redirects to /login', () => {
       const authState: MockAuthState = {
         isAuthenticated: false,
         isAdmin: false,
@@ -502,8 +502,8 @@ describe('路由守卫逻辑', () => {
         backendModeEnabled: true,
         hasPendingAuthSession: false,
       }
-      const redirect = simulateGuard('/payment/result', { requiresAuth: false }, authState)
-      expect(redirect).toBeNull()
+      const redirect = simulateGuard('/payment/result', {}, authState)
+      expect(redirect).toBe('/login')
     })
 
     it('unauthenticated: /register is allowed when a pending auth session exists', () => {
