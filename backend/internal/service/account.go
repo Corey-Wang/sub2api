@@ -1343,6 +1343,12 @@ func (a *Account) IsOpenAIOAuth() bool {
 	return a.IsOpenAI() && a.Type == AccountTypeOAuth
 }
 
+// IsOpenAISIWC reports an official Sign in with ChatGPT token-sharing account.
+// These accounts are not Codex OAuth accounts and must not use chatgpt.com.
+func (a *Account) IsOpenAISIWC() bool {
+	return a != nil && a.IsOpenAI() && a.Type == AccountTypeSIWC
+}
+
 // IsOpenAIOAuthLike reports OpenAI credentials that use the ChatGPT/Codex
 // inference protocol. Setup tokens share that forwarding contract but do not
 // participate in the refreshable OAuth credential lifecycle.
@@ -2045,7 +2051,7 @@ func (a *Account) IsOveragesEnabled() bool {
 // 兼容字段：accounts.extra.openai_oauth_passthrough（历史 OAuth 开关）。
 // 字段缺失或类型不正确时，按 false（关闭）处理。
 func (a *Account) IsOpenAIPassthroughEnabled() bool {
-	if a == nil || !a.IsOpenAI() || a.Extra == nil {
+	if a == nil || !a.IsOpenAI() || a.Type == AccountTypeSIWC || a.Extra == nil {
 		return false
 	}
 	if enabled, ok := a.Extra["openai_passthrough"].(bool); ok {
@@ -2071,7 +2077,7 @@ func (a *Account) IsOpenAIPassthroughEnabled() bool {
 // 1. 按账号类型读取分类型字段
 // 2. 分类型字段缺失时，回退兼容字段
 func (a *Account) IsOpenAIResponsesWebSocketV2Enabled() bool {
-	if a == nil || !a.IsOpenAI() || a.Extra == nil {
+	if a == nil || !a.IsOpenAI() || a.Type == AccountTypeSIWC || a.Extra == nil {
 		return false
 	}
 	if a.IsOpenAIOAuthLike() {

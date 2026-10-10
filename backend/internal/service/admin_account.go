@@ -497,6 +497,10 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 
 	// 绑定分组
 	groupIDs := input.GroupIDs
+	if input.Type == AccountTypeSIWC {
+		// 官方 SIWC 只允许本人使用，不能自动进入平台默认共享分组。
+		input.SkipDefaultGroupBind = true
+	}
 	// 如果没有指定分组,自动绑定对应平台的默认分组
 	if len(groupIDs) == 0 && !input.SkipDefaultGroupBind {
 		defaultGroupName := input.Platform + "-default"
@@ -531,6 +535,14 @@ func (s *adminServiceImpl) CreateAccount(ctx context.Context, input *CreateAccou
 	account, err := buildAccountForCreate(input, accountExtra)
 	if err != nil {
 		return nil, err
+	}
+	if input.Type == AccountTypeSIWC {
+		if err := s.validateSIWCGroups(ctx, groupIDs); err != nil {
+			return nil, err
+		}
+		if err := applySIWCCreatePolicy(account, input.SIWCOwnerUserID); err != nil {
+			return nil, err
+		}
 	}
 	if err := s.ValidateAccountGroupBindings(ctx, groupIDs); err != nil {
 		return nil, err
@@ -603,6 +615,10 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 		if err := ValidateUpstreamRequestIDHeaderExtra(normalizedExtra); err != nil {
 			return nil, err
 		}
+	}
+	var previousSIWCOwner any
+	if account.Credentials != nil {
+		previousSIWCOwner = account.Credentials["owner_user_id"]
 	}
 	previousProbeIdentity := upstreamBillingProbeIdentity(account)
 	previousOllamaUsageIdentity := ollamaCloudUsageIdentity(account)
@@ -842,6 +858,17 @@ func (s *adminServiceImpl) UpdateAccount(ctx context.Context, id int64, input *U
 	}
 	if input.AutoPauseOnExpired != nil {
 		account.AutoPauseOnExpired = *input.AutoPauseOnExpired
+	}
+
+	if account.Type == AccountTypeSIWC {
+		if err := preserveSIWCOwner(account, previousSIWCOwner); err != nil {
+			return nil, err
+		}
+		if input.GroupIDs != nil {
+			if err := s.validateSIWCGroups(ctx, *input.GroupIDs); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// 先验证分组是否存在（在任何写操作之前）

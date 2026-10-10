@@ -31,7 +31,9 @@
             }}</span>
             <span class="text-sm text-gray-500 dark:text-gray-400">
               {{
-                isOpenAI
+                isSIWC
+                  ? t('admin.accounts.siwc.title')
+                  : isOpenAI
                   ? t('admin.accounts.openaiAccount')
                   : isGemini
                     ? t('admin.accounts.geminiAccount')
@@ -116,7 +118,16 @@
         </div>
       </div>
 
+      <SIWCAccountPanel
+        v-if="isSIWC && account"
+        mode="reauth"
+        :account-id="account.id"
+        :proxy-id="account.proxy_id"
+        @authorized="handleSIWCReauthorized"
+      />
+
       <OAuthAuthorizationFlow
+        v-if="!isSIWC"
         ref="oauthFlowRef"
         :add-method="addMethod"
         :auth-url="currentAuthUrl"
@@ -142,7 +153,7 @@
           {{ t('common.cancel') }}
         </button>
         <button
-          v-if="isManualInputMethod"
+          v-if="isManualInputMethod && !isSIWC"
           type="button"
           :disabled="!canExchangeCode"
           class="btn btn-primary"
@@ -196,6 +207,7 @@ import type { Account } from '@/types'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import OAuthAuthorizationFlow from './OAuthAuthorizationFlow.vue'
+import SIWCAccountPanel from './SIWCAccountPanel.vue'
 
 // Type for exposed OAuthAuthorizationFlow component
 // Note: defineExpose automatically unwraps refs, so we use the unwrapped types
@@ -237,10 +249,16 @@ const geminiOAuthType = ref<'code_assist' | 'google_one' | 'ai_studio'>('code_as
 
 // Computed - check platform
 const isOpenAI = computed(() => props.account?.platform === 'openai')
-const isOpenAILike = computed(() => isOpenAI.value)
+const isSIWC = computed(() => isOpenAI.value && props.account?.type === 'siwc')
+const isOpenAILike = computed(() => isOpenAI.value && !isSIWC.value)
 const isGemini = computed(() => props.account?.platform === 'gemini')
 const isAnthropic = computed(() => props.account?.platform === 'anthropic')
 const isAntigravity = computed(() => props.account?.platform === 'antigravity')
+
+const handleSIWCReauthorized = () => {
+  emit('reauthorized')
+  handleClose()
+}
 
 // Computed - current OAuth state based on platform
 const currentAuthUrl = computed(() => {

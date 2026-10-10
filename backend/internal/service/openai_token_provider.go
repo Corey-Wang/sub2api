@@ -85,6 +85,8 @@ type OpenAITokenProvider struct {
 	refreshAPI         *OAuthRefreshAPI
 	executor           OAuthRefreshExecutor
 	refreshPolicy      ProviderRefreshPolicy
+	siwc               *OpenAISIWCService
+	siwcExecutor       OAuthRefreshExecutor
 }
 
 func NewOpenAITokenProvider(

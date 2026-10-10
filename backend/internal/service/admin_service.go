@@ -414,6 +414,9 @@ type CreateAccountInput struct {
 	// SkipMixedChannelCheck skips the mixed channel risk check when binding groups.
 	// This should only be set when the caller has explicitly confirmed the risk.
 	SkipMixedChannelCheck bool
+	// SIWCOwnerUserID is the admin user who created an official SIWC account.
+	// API keys used with that account must belong to this user.
+	SIWCOwnerUserID int64
 }
 
 // ShadowOptions is the input for CreateShadow.

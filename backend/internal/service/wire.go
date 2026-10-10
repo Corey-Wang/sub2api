@@ -112,9 +112,12 @@ func ProvideOpenAIOAuthService(
 	proxyRepo ProxyRepository,
 	oauthClient OpenAIOAuthClient,
 	privacyClientFactory PrivacyClientFactory,
+	settingService *SettingService,
+	accountRepo AccountRepository,
 ) *OpenAIOAuthService {
 	svc := NewOpenAIOAuthService(proxyRepo, oauthClient)
 	svc.SetPrivacyClientFactory(privacyClientFactory)
+	svc.SetSIWC(NewOpenAISIWCService(settingService, proxyRepo, accountRepo))
 	return svc
 }
 
@@ -172,6 +175,7 @@ func ProvideOpenAITokenProvider(
 	executor := NewOpenAITokenRefresher(openaiOAuthService, accountRepo)
 	p.SetRefreshAPI(refreshAPI, executor)
 	p.SetRefreshPolicy(OpenAIProviderRefreshPolicy())
+	p.SetSIWC(openaiOAuthService.SIWC())
 	return p
 }
 

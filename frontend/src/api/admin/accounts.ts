@@ -484,6 +484,41 @@ export async function exchangeCode(
   return data
 }
 
+export interface SIWCExchangeResult {
+  credentials: Record<string, unknown>
+  email?: string
+  scopes?: string
+  expires_at?: string
+  client_id?: string
+  account_id?: number
+}
+
+export async function generateSIWCAuthURL(config: {
+  proxy_id?: number | null
+  redirect_uri?: string
+  account_id?: number
+  reconsent?: boolean
+}): Promise<{ auth_url: string; session_id: string }> {
+  const { data } = await apiClient.post<{ auth_url: string; session_id: string }>(
+    '/admin/openai/siwc/generate-auth-url',
+    config
+  )
+  return data
+}
+
+export async function exchangeSIWCCallback(payload: {
+  session_id: string
+  callback_url: string
+}): Promise<SIWCExchangeResult> {
+  const { data } = await apiClient.post<SIWCExchangeResult>('/admin/openai/siwc/exchange-callback', payload)
+  return data
+}
+
+export async function revokeSIWCAccount(id: number): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>(`/admin/openai/siwc/accounts/${id}/revoke`)
+  return data
+}
+
 /**
  * Batch create accounts
  * @param accounts - Array of account data
@@ -1164,6 +1199,9 @@ export const accountsAPI = {
   syncUpstreamModelsPreview,
   generateAuthUrl,
   exchangeCode,
+  generateSIWCAuthURL,
+  exchangeSIWCCallback,
+  revokeSIWCAccount,
   refreshOpenAIToken,
   batchCreate,
   batchUpdateCredentials,
