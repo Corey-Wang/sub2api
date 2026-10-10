@@ -38,6 +38,14 @@
                 {{ t('admin.accounts.refreshToken') }}
               </button>
             </template>
+            <button
+              v-if="account.type === 'siwc' && !isShadow"
+              @click="$emit('reauth', account); $emit('close')"
+              class="flex w-full items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:bg-gray-100 dark:hover:bg-dark-700"
+            >
+              <Icon name="link" size="sm" />
+              {{ t('admin.accounts.reAuthorize') }}
+            </button>
             <button v-if="isOpenAIOAuthParent" @click="$emit('create-spark-shadow', account); $emit('close')" class="flex w-full items-center gap-2 px-4 py-2 text-sm text-amber-600 hover:bg-gray-100 dark:hover:bg-dark-700">
               <Icon name="sparkles" size="sm" />
               {{ t('admin.accounts.createSparkShadow') }}

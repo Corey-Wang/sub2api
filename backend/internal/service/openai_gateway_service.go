@@ -461,6 +461,7 @@ type OpenAIGatewayService struct {
 	deferredService       *DeferredService
 	openAITokenProvider   *OpenAITokenProvider
 	grokTokenProvider     *GrokTokenProvider
+	siwcForceRefresh      func(ctx context.Context, account *Account, stale string) (string, error)
 	toolCorrector         *CodexToolCorrector
 	openaiWSResolver      OpenAIWSProtocolResolver
 	resolver              *ModelPricingResolver
@@ -1252,6 +1253,19 @@ func (s *OpenAIGatewayService) GetAccessToken(ctx context.Context, account *Acco
 			return "", "", errors.New("access_token not found in credentials")
 		}
 		return accessToken, "oauth", nil
+	case AccountTypeSIWC:
+		if s.openAITokenProvider != nil {
+			accessToken, err := s.openAITokenProvider.GetSIWCAccessToken(ctx, account)
+			if err != nil {
+				return "", "", err
+			}
+			return accessToken, "siwc", nil
+		}
+		accessToken := strings.TrimSpace(account.GetCredential("access_token"))
+		if accessToken == "" {
+			return "", "", errors.New("access_token not found in credentials")
+		}
+		return accessToken, "siwc", nil
 	case AccountTypeAPIKey:
 		if account.Platform == PlatformGrok {
 			apiKey := strings.TrimSpace(account.GetCredential("api_key"))

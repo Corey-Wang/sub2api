@@ -18,6 +18,7 @@ type OpenAIOAuthService struct {
 	proxyRepo            ProxyRepository
 	oauthClient          OpenAIOAuthClient
 	privacyClientFactory PrivacyClientFactory // 用于调用 chatgpt.com/backend-api（ImpersonateChrome）
+	siwc                 *OpenAISIWCService
 }
 
 // NewOpenAIOAuthService creates a new OpenAI OAuth service
@@ -33,6 +34,21 @@ func NewOpenAIOAuthService(proxyRepo ProxyRepository, oauthClient OpenAIOAuthCli
 // 用于调用 chatgpt.com/backend-api 获取账号信息（plan_type 等）。
 func (s *OpenAIOAuthService) SetPrivacyClientFactory(factory PrivacyClientFactory) {
 	s.privacyClientFactory = factory
+}
+
+// SetSIWC attaches the official Sign in with ChatGPT service.
+func (s *OpenAIOAuthService) SetSIWC(svc *OpenAISIWCService) {
+	if s != nil {
+		s.siwc = svc
+	}
+}
+
+// SIWC returns the official Sign in with ChatGPT service, or nil when unwired.
+func (s *OpenAIOAuthService) SIWC() *OpenAISIWCService {
+	if s == nil {
+		return nil
+	}
+	return s.siwc
 }
 
 // OpenAIAuthURLResult contains the authorization URL and session info

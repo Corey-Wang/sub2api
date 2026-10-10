@@ -1630,6 +1630,20 @@ func (h *OpenAIGatewayHandler) handleAnthropicFailoverExhausted(c *gin.Context, 
 		h.anthropicStreamingAwareError(c, status, "api_error", failoverErr.ClientMessage, streamStarted)
 		return
 	}
+	if !streamStarted && failoverErr != nil {
+		if code, ok := service.SIWCKnownErrorCode(failoverErr.ResponseBody); ok {
+			status := siwcClientStatus(failoverErr.StatusCode)
+			msg := service.SanitizeUpstreamErrorMessage(service.ExtractUpstreamErrorMessage(failoverErr.ResponseBody))
+			if msg == "" {
+				msg = code
+			} else if !strings.Contains(msg, code) {
+				msg = msg + " (" + code + ")"
+			}
+			service.SetOpsUpstreamError(c, failoverErr.StatusCode, msg, "")
+			h.anthropicStreamingAwareError(c, status, "api_error", msg, streamStarted)
+			return
+		}
+	}
 	status, errType, errMsg := h.mapUpstreamError(failoverErr.StatusCode)
 	h.anthropicStreamingAwareError(c, status, errType, errMsg, streamStarted)
 }
@@ -3590,6 +3604,17 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 		h.handleStreamingAwareError(c, http.StatusBadGateway, "upstream_error", service.OpenAISilentRefusalClientMessage(), streamStarted)
 		return
 	}
+	if !streamStarted {
+		if code, ok := service.SIWCKnownErrorCode(responseBody); ok {
+			upstreamMsg := service.SanitizeUpstreamErrorMessage(service.ExtractUpstreamErrorMessage(responseBody))
+			if upstreamMsg == "" {
+				upstreamMsg = code
+			}
+			service.SetOpsUpstreamError(c, statusCode, upstreamMsg, "")
+			service.WriteOpenAIUpstreamClientError(c, statusCode, responseBody, upstreamMsg)
+			return
+		}
+	}
 
 	// 先检查透传规则
 	if h.errorPassthroughService != nil && len(responseBody) > 0 {
@@ -3622,6 +3647,15 @@ func (h *OpenAIGatewayHandler) handleFailoverExhausted(c *gin.Context, failoverE
 	// 使用默认的错误映射
 	status, errType, errMsg := h.mapUpstreamError(statusCode)
 	h.handleStreamingAwareError(c, status, errType, errMsg, streamStarted)
+}
+
+func siwcClientStatus(statusCode int) int {
+	switch statusCode {
+	case http.StatusBadRequest, http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests, http.StatusServiceUnavailable:
+		return statusCode
+	default:
+		return http.StatusBadGateway
+	}
 }
 
 func credentialFailoverClientResponse(failoverErr *service.UpstreamFailoverError) (int, string) {
