@@ -1619,11 +1619,27 @@ type RedisConfig struct {
 	// MinIdleConns: 最小空闲连接数，保持热连接减少冷启动延迟
 	MinIdleConns int `mapstructure:"min_idle_conns"`
 	// EnableTLS: 是否启用 TLS/SSL 连接
-	EnableTLS bool `mapstructure:"enable_tls"`
+	EnableTLS      bool   `mapstructure:"enable_tls"`
+	ClusterEnabled bool   `mapstructure:"cluster_enabled"`
+	KeyPrefix      string `mapstructure:"key_prefix"`
 }
 
 func (r *RedisConfig) Address() string {
 	return fmt.Sprintf("%s:%d", r.Host, r.Port)
+}
+
+// ValidateCluster keeps the application's multi-key operations in one slot.
+func (r *RedisConfig) ValidateCluster() error {
+	if !r.ClusterEnabled {
+		return nil
+	}
+	if r.DB != 0 {
+		return fmt.Errorf("Redis Cluster requires DB 0")
+	}
+	if !strings.HasPrefix(r.KeyPrefix, "{") || strings.Index(r.KeyPrefix, "}") < 2 {
+		return fmt.Errorf("Redis Cluster requires a deployment key prefix with a nonempty leading hash tag")
+	}
+	return nil
 }
 
 type OpsConfig struct {
@@ -2234,6 +2250,8 @@ func setDefaults() {
 	viper.SetDefault("redis.pool_size", 1024)
 	viper.SetDefault("redis.min_idle_conns", 128)
 	viper.SetDefault("redis.enable_tls", false)
+	viper.SetDefault("redis.cluster_enabled", false)
+	viper.SetDefault("redis.key_prefix", "")
 
 	// Batch Image queue
 	viper.SetDefault("batch_image.enabled", false)
@@ -2703,6 +2721,9 @@ func setEnvReachableDefaults() {
 }
 
 func (c *Config) Validate() error {
+	if err := c.Redis.ValidateCluster(); err != nil {
+		return err
+	}
 	forwardedClientIPHeaders, err := NormalizeForwardedClientIPHeaders(c.Security.ForwardedClientIPHeaders)
 	if err != nil {
 		return fmt.Errorf("security.forwarded_client_ip_headers: %w", err)

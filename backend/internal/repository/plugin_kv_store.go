@@ -19,12 +19,12 @@ const pluginKVKeyPrefix = "plugin:kv:v1:"
 const pluginKVScanCount = 200
 
 type pluginKVStore struct {
-	rdb *redis.Client
+	rdb redis.UniversalClient
 }
 
 // NewPluginKVStore 返回 Redis 支撑的通用插件键值存储。使用 Redis 而非进程内存，使得
 // 插件状态可跨副本、跨重启共享，这正是有状态插件所需的通用能力。
-func NewPluginKVStore(rdb *redis.Client) service.PluginKVStore {
+func NewPluginKVStore(rdb redis.UniversalClient) service.PluginKVStore {
 	return &pluginKVStore{rdb: rdb}
 }
 

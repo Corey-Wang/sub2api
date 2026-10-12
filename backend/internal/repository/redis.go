@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
+	"github.com/Wei-Shaw/sub2api/internal/pkg/redisnamespace"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -20,8 +21,15 @@ import (
 // 1. PoolSize: 控制最大并发连接数（默认 128）
 // 2. MinIdleConns: 保持最小空闲连接，减少冷启动延迟（默认 10）
 // 3. DialTimeout/ReadTimeout/WriteTimeout: 精确控制各阶段超时
-func InitRedis(cfg *config.Config) *redis.Client {
-	client := redis.NewClient(buildRedisOptions(cfg))
+func InitRedis(cfg *config.Config) redis.UniversalClient {
+	opts := buildRedisOptions(cfg)
+	var client redis.UniversalClient
+	if cfg.Redis.ClusterEnabled {
+		client = redis.NewClusterClient(&redis.ClusterOptions{Addrs: []string{opts.Addr}, Username: opts.Username, Password: opts.Password, TLSConfig: opts.TLSConfig, DialTimeout: opts.DialTimeout, ReadTimeout: opts.ReadTimeout, WriteTimeout: opts.WriteTimeout, PoolSize: opts.PoolSize, MinIdleConns: opts.MinIdleConns, Protocol: 2})
+	} else {
+		client = redis.NewClient(opts)
+	}
+	client = redisnamespace.Wrap(client, cfg.Redis.KeyPrefix)
 	if cfg.Server.EnableServerTiming {
 		client.AddHook(serverTimingRedisHook{})
 	}

@@ -15,12 +15,12 @@ var ErrNotConfigured = errors.New("redis session store not configured")
 
 // Store persists JSON sessions and single-use markers under one namespace.
 type Store struct {
-	rdb    *redis.Client
+	rdb    redis.UniversalClient
 	prefix string
 	ttl    time.Duration
 }
 
-func New(rdb *redis.Client, prefix string, ttl time.Duration) *Store {
+func New(rdb redis.UniversalClient, prefix string, ttl time.Duration) *Store {
 	if ttl <= 0 {
 		ttl = 30 * time.Minute
 	}

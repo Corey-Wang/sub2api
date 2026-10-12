@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/redisnamespace"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/redis/go-redis/v9"
 )
@@ -220,16 +221,16 @@ return 1
 )
 
 type schedulerCache struct {
-	rdb            *redis.Client
+	rdb            redis.UniversalClient
 	mgetChunkSize  int
 	writeChunkSize int
 }
 
-func NewSchedulerCache(rdb *redis.Client) service.SchedulerCache {
+func NewSchedulerCache(rdb redis.UniversalClient) service.SchedulerCache {
 	return newSchedulerCacheWithChunkSizes(rdb, defaultSchedulerSnapshotMGetChunkSize, defaultSchedulerSnapshotWriteChunkSize)
 }
 
-func newSchedulerCacheWithChunkSizes(rdb *redis.Client, mgetChunkSize, writeChunkSize int) service.SchedulerCache {
+func newSchedulerCacheWithChunkSizes(rdb redis.UniversalClient, mgetChunkSize, writeChunkSize int) service.SchedulerCache {
 	if mgetChunkSize <= 0 {
 		mgetChunkSize = defaultSchedulerSnapshotMGetChunkSize
 	}
@@ -331,7 +332,7 @@ func (c *schedulerCache) RetireBucket(ctx context.Context, bucket service.Schedu
 		schedulerBucketSetKey,
 		schedulerBucketKey(schedulerReadyPrefix, bucket),
 		schedulerBucketKey(schedulerActivePrefix, bucket),
-	}, bucket.String(), snapshotKeyPrefix, snapshotGraceTTLSeconds).Int64()
+	}, bucket.String(), redisnamespace.PhysicalKeyPrefix(c.rdb, snapshotKeyPrefix), snapshotGraceTTLSeconds).Int64()
 	if err != nil {
 		return err
 	}
@@ -349,7 +350,7 @@ func (c *schedulerCache) ReopenBucket(ctx context.Context, bucket service.Schedu
 		schedulerBucketSetKey,
 		schedulerBucketKey(schedulerReadyPrefix, bucket),
 		schedulerBucketKey(schedulerActivePrefix, bucket),
-	}, bucket.String(), snapshotKeyPrefix, snapshotGraceTTLSeconds).Int64()
+	}, bucket.String(), redisnamespace.PhysicalKeyPrefix(c.rdb, snapshotKeyPrefix), snapshotGraceTTLSeconds).Int64()
 	if err != nil {
 		return service.SchedulerBucketWriteToken{}, err
 	}
@@ -546,7 +547,7 @@ func (c *schedulerCache) activateSnapshotVersion(ctx context.Context, bucket ser
 		schedulerBucketKey(schedulerEpochPrefix, bucket),
 		schedulerBucketKey(schedulerRetiredPrefix, bucket),
 	}
-	args := []any{version, bucket.String(), snapshotKeyPrefix, snapshotGraceTTLSeconds, token.Epoch}
+	args := []any{version, bucket.String(), redisnamespace.PhysicalKeyPrefix(c.rdb, snapshotKeyPrefix), snapshotGraceTTLSeconds, token.Epoch}
 
 	result, err := activateSnapshotScript.Run(ctx, c.rdb, keys, args...).Int64()
 	if err != nil {
