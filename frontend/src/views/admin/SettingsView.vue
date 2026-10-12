@@ -7161,6 +7161,34 @@
 
 	        <!-- Tab: Features (功能开关) -->
         <div v-show="activeTab === 'features'" class="space-y-6">
+          <div class="card">
+            <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
+              <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t('admin.settings.features.menuVisibility.title') }}
+              </h2>
+              <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.features.menuVisibility.description') }}
+              </p>
+            </div>
+            <div class="space-y-5 p-6">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-testid="menus-show-all" @click="setAllMenusVisible(true)">{{ t('admin.settings.features.menuVisibility.showAll') }}</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-testid="menus-hide-all" @click="setAllMenusVisible(false)">{{ t('admin.settings.features.menuVisibility.hideAll') }}</button>
+              </div>
+              <section v-for="group in menuVisibilityGroups" :key="group.id" class="space-y-3" :data-testid="`menu-group-${group.id}`">
+                <h3 v-if="group.items.length" class="border-b border-gray-100 pb-2 text-sm font-semibold text-gray-900 dark:border-dark-700 dark:text-white">{{ group.label }}</h3>
+                <div class="grid gap-x-8 gap-y-3 md:grid-cols-2">
+                  <div v-for="menu in group.items" :key="menu.id" class="flex items-center justify-between gap-4" :class="menu.parent ? 'pl-5' : ''">
+                    <label :id="`menu-label-${menu.id}`" class="text-sm text-gray-700 dark:text-gray-300" :class="!menu.parent ? 'font-medium' : ''">{{ menu.label }}</label>
+                    <Toggle :model-value="!form.hidden_menu_items.includes(menu.id)" :aria-labelledby="`menu-label-${menu.id}`" :data-testid="`menu-visible-${menu.id}`" @update:model-value="setMenuVisible(menu.id, $event)" />
+                  </div>
+                </div>
+              </section>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ t('admin.settings.features.menuVisibility.hint') }}
+              </p>
+            </div>
+          </div>
 
         <div class="card">
           <div class="border-b border-gray-100 px-6 py-4 dark:border-dark-700">
@@ -8975,6 +9003,7 @@
 </template>
 
 <script setup lang="ts">
+import { CONFIGURABLE_MENUS, MENU_GROUPS, type ConfigurableMenuID } from "@/utils/menuVisibility";
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { listPlatformIds } from "@/constants/platformCatalog";
 import { useI18n } from "vue-i18n";
@@ -9848,6 +9877,7 @@ const form = reactive<SettingsForm>({
   payment_alipay_mobile_precreate_deep_link: false,
   table_default_page_size: tablePageSizeDefault,
   table_page_size_options: [10, 20, 50, 100],
+  hidden_menu_items: [] as string[],
   custom_menu_items: [] as Array<{
     id: string;
     label: string;
@@ -10843,7 +10873,7 @@ async function setAndCopyOIDCRedirectUrl() {
 // Custom menu item management
 function addMenuItem() {
   form.custom_menu_items.push({
-    id: "",
+    id: `menu-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
     label: "",
     icon_svg: "",
     url: "",
@@ -11316,6 +11346,39 @@ const siteBillingModeHint = computed(() =>
   t(`admin.settings.features.siteBillingMode.hints.${SITE_BILLING_MODE_I18N_KEYS[siteBillingMode.value]}`),
 );
 
+const menuVisibilityGroups = computed(() => [
+  ...MENU_GROUPS.map(group => ({
+    id: group,
+    label: t(`admin.settings.features.menuVisibility.groups.${group}`),
+    items: CONFIGURABLE_MENUS.filter(menu => menu.group === group).map(menu => ({
+      id: menu.id as ConfigurableMenuID,
+      label: t(menu.label),
+      parent: 'parent' in menu ? menu.parent : undefined,
+    })),
+  })),
+  {
+    id: 'custom',
+    label: t('admin.settings.features.menuVisibility.groups.custom'),
+    items: form.custom_menu_items.filter(menu => Boolean(menu.id)).map(menu => ({
+      id: `custom:${menu.id}` as ConfigurableMenuID,
+      label: menu.label || t('admin.settings.features.menuVisibility.unnamed'),
+      parent: undefined,
+    })),
+  },
+]);
+function setAllMenusVisible(visible: boolean) {
+  form.hidden_menu_items = visible ? [] : [...new Set([
+    ...form.hidden_menu_items,
+    ...menuVisibilityGroups.value.flatMap(group => group.items.map(menu => menu.id)),
+  ])];
+}
+
+function setMenuVisible(id: ConfigurableMenuID, visible: boolean) {
+  const hidden = form.hidden_menu_items.filter(item => item !== id);
+  if (!visible) hidden.push(id);
+  form.hidden_menu_items = hidden;
+}
+
 async function saveSettings() {
   saving.value = true;
   try {
@@ -11525,6 +11588,7 @@ async function saveSettings() {
       hide_ccs_import_button: form.hide_ccs_import_button,
       table_default_page_size: form.table_default_page_size,
       table_page_size_options: form.table_page_size_options,
+      hidden_menu_items: form.hidden_menu_items,
       custom_menu_items: form.custom_menu_items,
       custom_endpoints: form.custom_endpoints,
       frontend_url: form.frontend_url,

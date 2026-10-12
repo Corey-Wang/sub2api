@@ -724,6 +724,56 @@ describe("admin SettingsView payment visible method controls", () => {
     adminSettingsFetch.mockResolvedValue(undefined);
   });
 
+  it("loads, saves and restores the shared menu visibility switches", async () => {
+    getSettings.mockResolvedValue({
+      ...baseSettingsResponse,
+      hidden_menu_items: ["subscriptions", "redeem"],
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    const ids = ["subscriptions", "channels", "announcements", "redeem", "promo_codes"];
+    for (const id of ids) {
+      const toggle = wrapper.get<HTMLInputElement>(`[data-testid="menu-visible-${id}"]`);
+      expect(toggle.element.checked).toBe(!["subscriptions", "redeem"].includes(id));
+      await toggle.setValue(false);
+    }
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings.mock.calls[0]?.[0].hidden_menu_items).toEqual(expect.arrayContaining(ids));
+    expect(updateSettings.mock.calls[0]?.[0].hidden_menu_items).toHaveLength(5);
+    expect(fetchPublicSettings).toHaveBeenCalledWith(true);
+
+    for (const id of ids) {
+      await wrapper.get(`[data-testid="menu-visible-${id}"]`).setValue(true);
+    }
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings.mock.calls[1]?.[0].hidden_menu_items).toEqual([]);
+    wrapper.unmount();
+  });
+
+  it("configures every menu and each custom entry with bulk show/hide", async () => {
+    getSettings.mockResolvedValue({ ...baseSettingsResponse, custom_menu_items: [{ id: "docs", label: "Docs", url: "https://example.com/docs", icon_svg: "", visibility: "user", sort_order: 0 }], hidden_menu_items: [] });
+    const wrapper = mountView();
+    await flushPromises();
+    const toggles = wrapper.findAll<HTMLInputElement>('[data-testid^="menu-visible-"]');
+    expect(toggles).toHaveLength(49);
+    expect(wrapper.find('[data-testid="menu-visible-settings"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="menu-visible-custom:docs"]').exists()).toBe(true);
+    await wrapper.get('[data-testid="menus-hide-all"]').trigger('click');
+    expect(toggles.every(toggle => !toggle.element.checked)).toBe(true);
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings.mock.calls[0]?.[0].hidden_menu_items).toHaveLength(49);
+    expect(updateSettings.mock.calls[0]?.[0].hidden_menu_items).toContain('custom:docs');
+    expect(updateSettings.mock.calls[0]?.[0].hidden_menu_items).toContain('order_management');
+    await wrapper.get('[data-testid="menus-show-all"]').trigger('click');
+    await wrapper.find("form").trigger("submit.prevent");
+    await flushPromises();
+    expect(updateSettings.mock.calls[1]?.[0].hidden_menu_items).toEqual([]);
+    wrapper.unmount();
+  });
+
   it("loads and saves the open button visibility for each custom menu", async () => {
     const menuItems = [
       { id: "docs", label: "Docs", url: "https://example.com/docs", icon_svg: "", visibility: "user", sort_order: 0 },

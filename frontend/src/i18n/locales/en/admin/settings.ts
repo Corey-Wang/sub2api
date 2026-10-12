@@ -14,6 +14,24 @@ export default {
         payment: 'Payment',
       },
       features: {
+        menuVisibility: {
+          description: "Configure all admin, personal, nested, custom and header entries. Changes apply after saving.",
+          hint: "Hiding a parent hides all its children. Subscriptions and redeem keep their shared admin/user switches. Visibility does not change permissions or disable features, and feature restrictions still apply. Open /admin/settings directly to restore a hidden Settings entry.",
+          showAll: "Show all",
+          hideAll: "Hide all",
+          language: "Language switcher",
+          theme: "Theme switcher",
+          collapse: "Collapse / expand sidebar",
+          unnamed: "Unnamed menu",
+          title: "Menu visibility",
+          groups: {
+            admin: "Admin menus",
+            user: "User / My account",
+            shared: "Shared admin and user menus",
+            header: "Header and sidebar actions",
+            custom: "Custom menus",
+          },
+        },
         channelMonitor: {
           title: 'Channel Monitor',
           description: 'Choose either V1 active probes or V2 passive usage monitoring. When disabled, both background jobs stop and the user entry is hidden.',

@@ -357,6 +357,15 @@ func (s *SettingService) buildSystemSettingsUpdates(ctx context.Context, setting
 		return nil, fmt.Errorf("marshal table page size options: %w", err)
 	}
 	updates[SettingKeyTablePageSizeOptions] = string(tablePageSizeOptionsJSON)
+	hiddenMenuItems, err := NormalizeHiddenMenuItems(settings.HiddenMenuItems)
+	if err != nil {
+		return nil, err
+	}
+	hiddenMenuItemsJSON, err := json.Marshal(hiddenMenuItems)
+	if err != nil {
+		return nil, fmt.Errorf("marshal hidden menu items: %w", err)
+	}
+	updates[SettingKeyHiddenMenuItems] = string(hiddenMenuItemsJSON)
 	updates[SettingKeyCustomMenuItems] = settings.CustomMenuItems
 	updates[SettingKeyCustomEndpoints] = settings.CustomEndpoints
 

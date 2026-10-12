@@ -14,6 +14,24 @@ export default {
         payment: '支付设置',
       },
       features: {
+        menuVisibility: {
+          description: "管理员、用户、二级菜单、自定义菜单和顶部入口均可配置显示，保存后生效。",
+          hint: "隐藏父菜单会收起其所有子菜单；订阅和兑换沿用管理员与用户共用开关。隐藏不改变权限或停用功能，菜单显示仍受功能开关限制。若隐藏系统设置，可直接访问 /admin/settings 恢复。",
+          showAll: "全部显示",
+          hideAll: "全部隐藏",
+          language: "语言切换",
+          theme: "主题切换",
+          collapse: "侧栏收起 / 展开",
+          unnamed: "未命名菜单",
+          title: "菜单显示",
+          groups: {
+            admin: "管理员菜单",
+            user: "用户 / 我的账户",
+            shared: "管理员与用户共用菜单",
+            header: "顶部入口与侧栏操作",
+            custom: "自定义菜单",
+          },
+        },
         channelMonitor: {
           title: '渠道监控',
           description: '启用后在 V1 主动探测与 V2 被动用量监控中二选一。关闭后两种模式的后台任务均停止，用户端入口隐藏。',
