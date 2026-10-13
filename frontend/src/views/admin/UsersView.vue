@@ -29,6 +29,7 @@
                 :options="[
                   { value: '', label: t('admin.users.allRoles') },
                   { value: 'admin', label: t('admin.users.admin') },
+                  { value: 'readonly_admin', label: t('admin.users.roles.readonly_admin') },
                   { value: 'user', label: t('admin.users.user') }
                 ]"
                 @change="applyFilter"
@@ -337,7 +338,7 @@
           </template>
 
           <template #cell-role="{ value }">
-            <span :class="['badge', value === 'admin' ? 'badge-purple' : 'badge-gray']">
+            <span :class="['badge', value === 'admin' ? 'badge-purple' : value === 'readonly_admin' ? 'badge-warning' : 'badge-gray']">
               {{ t('admin.users.roles.' + value) }}
             </span>
           </template>

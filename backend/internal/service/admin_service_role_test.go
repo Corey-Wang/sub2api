@@ -23,6 +23,19 @@ func TestAdminService_CreateUser_WithAdminRole(t *testing.T) {
 	require.Equal(t, RoleAdmin, user.Role)
 }
 
+func TestAdminService_CreateUser_WithReadOnlyAdminRole(t *testing.T) {
+	repo := &userRepoStub{nextID: 33}
+	svc := &adminServiceImpl{userRepo: repo}
+
+	user, err := svc.CreateUser(context.Background(), &CreateUserInput{
+		Email:    "readonly-admin@test.com",
+		Password: "strong-pass",
+		Role:     RoleReadOnlyAdmin,
+	})
+	require.NoError(t, err)
+	require.Equal(t, RoleReadOnlyAdmin, user.Role)
+}
+
 func TestAdminService_CreateUser_DefaultsToUserRole(t *testing.T) {
 	repo := &userRepoStub{nextID: 31}
 	svc := &adminServiceImpl{userRepo: repo}
@@ -108,6 +121,17 @@ func TestAdminService_UpdateUser_DemoteLastAdminRejected(t *testing.T) {
 	require.Contains(t, err.Error(), "last admin")
 	require.Nil(t, repo.lastUpdated, "最后一个管理员不应被降级持久化")
 	require.Equal(t, 1, repo.listCalls, "降级路径应触发管理员计数")
+}
+
+func TestAdminService_UpdateUser_DemoteLastAdminToReadOnlyRejected(t *testing.T) {
+	base := &userRepoStub{user: &User{ID: 42, Email: "a@example.com", Role: RoleAdmin}}
+	repo := &roleGuardUserRepoStub{rpmUserRepoStub: &rpmUserRepoStub{userRepoStub: base}, adminTotal: 1}
+	svc := &adminServiceImpl{userRepo: repo, redeemCodeRepo: &redeemRepoStub{}}
+
+	_, err := svc.UpdateUser(context.Background(), 42, &UpdateUserInput{Role: RoleReadOnlyAdmin})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "last admin")
+	require.Nil(t, repo.lastUpdated)
 }
 
 func TestAdminService_UpdateUser_DemoteAdminAllowedWhenOthersExist(t *testing.T) {

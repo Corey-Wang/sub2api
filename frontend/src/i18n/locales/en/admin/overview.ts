@@ -1,4 +1,9 @@
 export default {
+    readOnlyAdmin: {
+      title: 'Read-only administrator mode',
+      description: 'You can view administrative data, but cannot create, edit, delete, or perform other administrative changes.',
+      writeBlocked: 'Read-only administrators cannot perform administrative changes.'
+    },
     // Dashboard
     dashboard: {
       title: 'Admin Dashboard',
@@ -742,6 +747,7 @@ export default {
       totalRecharged: 'Total Recharged',
       roles: {
         admin: 'Admin',
+        readonly_admin: 'Read-only admin',
         user: 'User'
       },
       // Settings Dropdowns

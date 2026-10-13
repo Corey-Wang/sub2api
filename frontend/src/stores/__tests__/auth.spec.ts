@@ -314,6 +314,20 @@ describe('useAuthStore', () => {
     })
   })
 
+  it('只读管理员可以进入后台并显示只读身份', async () => {
+    mockLogin.mockResolvedValue({
+      ...fakeAuthResponse,
+      user: { ...fakeAdminUser, role: 'readonly_admin' },
+    })
+    const store = useAuthStore()
+    await store.login({ email: 'readonly@example.test', password: 'test-password' })
+    expect(store.isAdmin).toBe(true)
+    expect(store.isReadOnlyAdmin).toBe(true)
+    expect(store.user?.role).toBe('readonly_admin')
+    await store.logout()
+    expect(store.isReadOnlyAdmin).toBe(false)
+  })
+
   // --- isAdmin ---
 
   describe('isAdmin', () => {

@@ -111,10 +111,12 @@ func normalizeUserRole(role, fallback string) (string, error) {
 	if role == "" {
 		return fallback, nil
 	}
-	if role != RoleAdmin && role != RoleUser {
-		return "", fmt.Errorf("invalid role: %q (must be %s or %s)", role, RoleAdmin, RoleUser)
+	switch role {
+	case RoleAdmin, RoleReadOnlyAdmin, RoleUser:
+		return role, nil
+	default:
+		return "", fmt.Errorf("invalid role: %q (must be %s, %s, or %s)", role, RoleAdmin, RoleReadOnlyAdmin, RoleUser)
 	}
-	return role, nil
 }
 
 func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInput) (*User, error) {
@@ -125,7 +127,7 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 		balance = s.settingService.GetDefaultBalance(ctx)
 	}
 
-	// 角色可由管理员在创建时指定(admin/user);未提供时默认 user。
+	// 角色可由管理员在创建时指定(admin/readonly_admin/user);未提供时默认 user。
 	role, err := normalizeUserRole(input.Role, RoleUser)
 	if err != nil {
 		return nil, err
@@ -151,7 +153,7 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 		return nil, err
 	}
 	// 创建管理员属权限敏感操作，落审计日志（含操作者），便于事后追溯。
-	if user.Role == RoleAdmin {
+	if user.CanAccessAdmin() {
 		logger.LegacyPrintf("service.admin", "audit: admin user created actor_admin_id=%d target_user_id=%d",
 			input.ActorAdminID, user.ID)
 	}
@@ -249,7 +251,7 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 		fields.Status = true
 	}
 
-	// 角色变更(admin/user);空字符串表示不修改。
+	// 角色变更(admin/readonly_admin/user);空字符串表示不修改。
 	if input.Role != "" {
 		role, err := normalizeUserRole(input.Role, user.Role)
 		if err != nil {
@@ -257,7 +259,7 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 		}
 		// 防锁死保护：不允许降级系统中最后一个管理员（自我降级已在 handler 层拦截，
 		// 此处兜底覆盖跨管理员互降导致零 admin 的场景）。
-		if user.Role == RoleAdmin && role == RoleUser {
+		if user.Role == RoleAdmin && role != RoleAdmin {
 			if err := s.ensureNotLastAdmin(ctx); err != nil {
 				return nil, err
 			}

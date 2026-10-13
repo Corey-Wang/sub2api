@@ -62,6 +62,18 @@ describe('UserEditModal concurrency', () => {
     update.mockResolvedValue({})
   })
 
+  it('提供只读管理员选项并提交选择的角色', async () => {
+    const wrapper = mountModal(3)
+    const select = wrapper.findComponent({ name: 'Select' })
+    expect(select.props('options')).toContainEqual({
+      value: 'readonly_admin', label: 'admin.users.roles.readonly_admin'
+    })
+    select.vm.$emit('update:modelValue', 'readonly_admin')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(update).toHaveBeenCalledWith(7, expect.objectContaining({ role: 'readonly_admin' }))
+  })
+
   // Regression coverage for issue #5977: the gateway treats concurrency <= 0 as
   // unlimited (AcquireUserSlot) and both the batch limits endpoint and the bulk
   // edit modal accept 0, so this dialog must not be the only place that rejects
