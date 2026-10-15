@@ -47,7 +47,6 @@ export const CONFIGURABLE_MENUS = [
   {"id": "sidebar_collapse", "label": "admin.settings.features.menuVisibility.collapse", "paths": ["/navigation/sidebar-collapse"], "group": "header"},
   {"id": "subscriptions", "label": "nav.subscriptions", "paths": ["/admin/subscriptions", "/subscriptions"], "group": "shared"},
   {"id": "redeem", "label": "nav.redeemCodes", "paths": ["/admin/redeem", "/redeem"], "group": "shared"},
-  { "id": "onboarding", "label": "onboarding.restartTour", "paths": ["/navigation/onboarding"], "group": "header" },
 ] as const
 
 export type ConfigurableMenuID = typeof CONFIGURABLE_MENUS[number]['id'] | `custom:${string}`

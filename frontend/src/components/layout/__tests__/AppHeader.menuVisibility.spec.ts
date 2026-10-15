@@ -10,7 +10,7 @@ const state = {
 vi.mock('@/components/common/LocaleSwitcher.vue', () => ({ default: { template: '<span data-testid="language" />' } }))
 vi.mock('@/components/common/SubscriptionProgressMini.vue', () => ({ default: { template: '<span data-testid="subscription-progress" />' } }))
 vi.mock('@/components/common/AnnouncementBell.vue', () => ({ default: { template: '<span data-testid="announcements" />' } }))
-vi.mock('@/stores', () => ({ useAppStore: () => state.app, useAuthStore: () => state.auth, useOnboardingStore: () => ({ replay: vi.fn(), isCurrentStep: () => false }) }))
+vi.mock('@/stores', () => ({ useAppStore: () => state.app, useAuthStore: () => state.auth }))
 vi.mock('@/stores/app', () => ({ useAppStore: () => state.app }))
 vi.mock('@/stores/adminSettings', () => ({ useAdminSettingsStore: () => ({}) }))
 vi.mock('vue-i18n', async importOriginal => ({ ...(await importOriginal<typeof import('vue-i18n')>()), useI18n: () => ({ t: (key: string) => key }) }))
@@ -29,7 +29,7 @@ describe('header menu visibility', () => {
     expect(wrapper.find('a[href="https://docs.example.com/docs"]').exists()).toBe(true)
     expect(wrapper.find('a[href="https://github.com/Wei-Shaw/sub2api"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="subscription-progress"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('onboarding.restartTour')
+    expect(wrapper.text()).not.toContain('onboarding.restartTour')
     state.app.cachedPublicSettings.hidden_menu_items = ['profile', 'keys', 'docs', 'model_plaza', 'github', 'announcements_user', 'language_switcher', 'subscriptions', 'contact_support', 'logout', 'onboarding']
     await nextTick()
     expect(wrapper.findAll('a')).toHaveLength(0)
