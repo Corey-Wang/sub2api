@@ -54,15 +54,18 @@ func (r *adminComplianceRepoStub) Delete(ctx context.Context, key string) error 
 	return nil
 }
 
-func TestAdminComplianceStatusRequiresAckWhenMissing(t *testing.T) {
-	svc := NewSettingService(&adminComplianceRepoStub{}, &config.Config{})
+func TestAdminComplianceStatusDoesNotRequireAckWhenMissing(t *testing.T) {
+	repo := &adminComplianceRepoStub{}
+	svc := NewSettingService(repo, &config.Config{})
 
 	status, err := svc.GetAdminComplianceStatus(context.Background(), 1)
 	require.NoError(t, err)
-	require.True(t, status.Required)
+	require.False(t, status.Required)
 	require.Equal(t, AdminComplianceVersion, status.Version)
 	require.Equal(t, AdminComplianceAckPhraseZH, status.AckPhraseZH)
 	require.Equal(t, AdminComplianceDocumentPathZH, status.DocumentPathZH)
+	require.Nil(t, status.Acknowledgement)
+	require.Empty(t, repo.values)
 }
 
 func TestAcceptAdminComplianceRejectsWrongPhrase(t *testing.T) {
@@ -100,7 +103,7 @@ func TestAcceptAdminCompliancePersistsCurrentVersion(t *testing.T) {
 	require.Equal(t, AdminComplianceDocumentPathZH, stored.DocumentZH)
 }
 
-func TestAdminComplianceStatusRequiresAckOnOldVersion(t *testing.T) {
+func TestAdminComplianceStatusDoesNotRequireAckOnOldVersion(t *testing.T) {
 	old, err := json.Marshal(AdminComplianceAcknowledgement{Version: "v2026.01.01"})
 	require.NoError(t, err)
 	svc := NewSettingService(&adminComplianceRepoStub{
@@ -109,7 +112,7 @@ func TestAdminComplianceStatusRequiresAckOnOldVersion(t *testing.T) {
 
 	status, err := svc.GetAdminComplianceStatus(context.Background(), 1)
 	require.NoError(t, err)
-	require.True(t, status.Required)
+	require.False(t, status.Required)
 	require.Nil(t, status.Acknowledgement)
 }
 
@@ -126,8 +129,10 @@ func TestAdminComplianceStatusIsPerAdminUser(t *testing.T) {
 	statusForUserOne, err := svc.GetAdminComplianceStatus(context.Background(), 1)
 	require.NoError(t, err)
 	require.False(t, statusForUserOne.Required)
+	require.NotNil(t, statusForUserOne.Acknowledgement)
 
 	statusForUserTwo, err := svc.GetAdminComplianceStatus(context.Background(), 2)
 	require.NoError(t, err)
-	require.True(t, statusForUserTwo.Required)
+	require.False(t, statusForUserTwo.Required)
+	require.Nil(t, statusForUserTwo.Acknowledgement)
 }

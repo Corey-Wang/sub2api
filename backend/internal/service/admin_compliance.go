@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -26,11 +25,6 @@ const (
 )
 
 var (
-	ErrAdminComplianceAcknowledgementRequired = infraerrors.New(
-		http.StatusLocked,
-		"ADMIN_COMPLIANCE_ACK_REQUIRED",
-		"administrator compliance acknowledgement is required",
-	)
 	ErrAdminComplianceInvalidPhrase = infraerrors.BadRequest(
 		"ADMIN_COMPLIANCE_INVALID_PHRASE",
 		"confirmation phrase does not match",
@@ -91,7 +85,8 @@ func adminComplianceAcknowledgementKey(adminUserID int64) string {
 
 func (s *SettingService) GetAdminComplianceStatus(ctx context.Context, adminUserID int64) (*AdminComplianceStatus, error) {
 	status := &AdminComplianceStatus{
-		Required:       true,
+		// Kept for older clients; acknowledgement is no longer a prerequisite.
+		Required:       false,
 		Version:        AdminComplianceVersion,
 		DocumentPathZH: AdminComplianceDocumentPathZH,
 		DocumentPathEN: AdminComplianceDocumentPathEN,
@@ -121,14 +116,6 @@ func (s *SettingService) GetAdminComplianceStatus(ctx context.Context, adminUser
 		status.Acknowledgement = &ack
 	}
 	return status, nil
-}
-
-func (s *SettingService) IsAdminComplianceAcknowledged(ctx context.Context, adminUserID int64) (bool, error) {
-	status, err := s.GetAdminComplianceStatus(ctx, adminUserID)
-	if err != nil {
-		return false, err
-	}
-	return status != nil && !status.Required, nil
 }
 
 func (s *SettingService) AcceptAdminCompliance(ctx context.Context, input AdminComplianceAcceptInput) (*AdminComplianceStatus, error) {
