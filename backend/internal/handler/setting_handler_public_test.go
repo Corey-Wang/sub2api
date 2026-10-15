@@ -53,6 +53,31 @@ func (s *settingHandlerPublicRepoStub) Delete(ctx context.Context, key string) e
 	panic("unexpected Delete call")
 }
 
+func TestProvideSettingHandler_PublishesBuildVersionInInitialSettings(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := service.NewSettingService(&settingHandlerPublicRepoStub{values: map[string]string{}}, &config.Config{})
+	h := ProvideSettingHandler(svc, BuildInfo{Version: "0.2.16"}, nil)
+
+	initial, err := svc.GetPublicSettingsForInjection(context.Background())
+	require.NoError(t, err)
+	payload, ok := initial.(*service.PublicSettingsInjectionPayload)
+	require.True(t, ok)
+	require.Equal(t, "0.2.16", payload.Version)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/settings/public", nil)
+	h.GetPublicSettings(c)
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var response struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+	require.Equal(t, payload.Version, response.Data.Version)
+}
+
 func TestSettingHandler_GetPublicSettings_ExposesForceEmailOnThirdPartySignup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
