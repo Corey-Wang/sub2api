@@ -1,6 +1,6 @@
 # 只读管理员
 
-`0.2.15` 分支移植了 `feat/read-only-admin` 的 `readonly_admin` 角色，并保留现有菜单显示设置、Redis Cluster 兼容和管理员使用声明。
+`0.2.15` 分支移植了 `feat/read-only-admin` 的 `readonly_admin` 角色，`0.2.16` 分支在同步官方 v0.2.16 时继续保留此功能，以及菜单显示设置、Redis Cluster 兼容和管理员使用声明。
 
 ## 使用
 
