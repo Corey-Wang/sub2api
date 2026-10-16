@@ -119,14 +119,6 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 
 	return func(c *gin.Context) {
 		finalPolicy := policy
-		if getFrameSrcOrigins != nil {
-			for _, origin := range getFrameSrcOrigins() {
-				if origin != "" {
-					finalPolicy = addToDirective(finalPolicy, "frame-src", origin)
-				}
-			}
-		}
-
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -136,6 +128,13 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 		}
 
 		if cfg.Enabled {
+			if getFrameSrcOrigins != nil {
+				for _, origin := range getFrameSrcOrigins() {
+					if origin != "" {
+						finalPolicy = addToDirective(finalPolicy, "frame-src", origin)
+					}
+				}
+			}
 			// Generate nonce for this request
 			nonce, err := GenerateNonce()
 			if err != nil {

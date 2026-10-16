@@ -1,10 +1,7 @@
 package server
 
 import (
-	"context"
 	"log"
-	"sync/atomic"
-	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
@@ -16,8 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 )
-
-const frameSrcRefreshTimeout = 5 * time.Second
 
 // SetupRouter 配置路由器中间件和路由
 func SetupRouter(
@@ -38,21 +33,9 @@ func SetupRouter(
 	redisClient redis.UniversalClient,
 ) *gin.Engine {
 	middleware2.SetIngressRejectRecorder(opsService)
-	// 缓存 iframe 页面的 origin 列表，用于动态注入 CSP frame-src
-	var cachedFrameOrigins atomic.Pointer[[]string]
-	emptyOrigins := []string{}
-	cachedFrameOrigins.Store(&emptyOrigins)
-
-	refreshFrameOrigins := func() {
-		ctx, cancel := context.WithTimeout(context.Background(), frameSrcRefreshTimeout)
-		defer cancel()
-		origins, err := settingService.GetFrameSrcOrigins(ctx)
-		if err != nil {
-			// 获取失败时保留已有缓存，避免 frame-src 被意外清空
-			return
-		}
-		cachedFrameOrigins.Store(&origins)
-	}
+	// Refresh from the shared database even when another node saved the settings.
+	frameOrigins := newFrameSrcOriginCache(settingService.GetFrameSrcOrigins)
+	refreshFrameOrigins := frameOrigins.Refresh
 	refreshFrameOrigins() // 启动时初始化
 
 	// 应用中间件
@@ -62,12 +45,7 @@ func SetupRouter(
 	r.Use(middleware2.SessionBindingContext(cfg))
 	r.Use(middleware2.Logger())
 	r.Use(middleware2.CORS(cfg.CORS))
-	r.Use(middleware2.SecurityHeaders(cfg.Security.CSP, func() []string {
-		if p := cachedFrameOrigins.Load(); p != nil {
-			return *p
-		}
-		return nil
-	}))
+	r.Use(middleware2.SecurityHeaders(cfg.Security.CSP, frameOrigins.Get))
 	r.Use(middleware2.ServerTiming(cfg.Server.EnableServerTiming))
 
 	// Serve embedded frontend with settings injection if available
