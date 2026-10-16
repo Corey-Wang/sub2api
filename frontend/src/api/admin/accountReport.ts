@@ -15,6 +15,7 @@ export interface ReportCounts {
   identity_uncertain: number
 }
 export interface ReportQuota {
+  model?: string
   key: string
   unit: 'percent' | 'requests' | 'credits'
   used: number | null
@@ -55,6 +56,7 @@ export interface ReportSource {
   stale: boolean
 }
 export interface ReportQuotaSummary {
+  model?: string
   key: string
   plan: string
   unit: ReportQuota['unit']

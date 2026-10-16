@@ -49,6 +49,7 @@ type KiroReportInstance struct {
 }
 
 type AccountReportQuota struct {
+	Model     string     `json:"model,omitempty"`
 	Key       string     `json:"key"`
 	Unit      string     `json:"unit"`
 	Used      *float64   `json:"used"`
@@ -110,6 +111,7 @@ type AccountReportPlan struct {
 	Count int    `json:"count"`
 }
 type AccountReportQuotaSummary struct {
+	Model     string   `json:"model,omitempty"`
 	Key       string   `json:"key"`
 	Plan      string   `json:"plan"`
 	Unit      string   `json:"unit"`
@@ -192,7 +194,7 @@ func NewAccountReportService(repo AccountRepository, usage *AccountUsageService,
 		}
 	}
 	data, _ := json.Marshal(s.instances)
-	s.cacheID = reportHash(string(data))
+	s.cacheID = reportHash("v2:" + string(data))
 	return s, nil
 }
 
@@ -302,9 +304,14 @@ func reportPreviousSource(prev accountReportSnapshot, id string) AccountReportSo
 
 func (s *AccountReportService) collect(ctx context.Context, prev accountReportSnapshot, now time.Time) accountReportSnapshot {
 	snap := accountReportSnapshot{UpdatedAt: now, Sources: []AccountReportSource{}, Rows: []AccountReportRow{}}
-	for _, p := range []struct{ native, report string }{{PlatformOpenAI, "gpt"}, {PlatformGemini, "gemini"}} {
+	for _, p := range []struct{ native, report string }{{PlatformOpenAI, "gpt"}, {PlatformGemini, "gemini"}, {PlatformAntigravity, "gemini"}} {
 		id := "sub2api-" + p.report
-		source := AccountReportSource{ID: id, Name: "Sub2API", Platform: p.report, AttemptedAt: now}
+		name := "Sub2API"
+		if p.native == PlatformAntigravity {
+			id = "sub2api-antigravity"
+			name = "Antigravity"
+		}
+		source := AccountReportSource{ID: id, Name: name, Platform: p.report, AttemptedAt: now}
 		accounts, err := s.repo.ListAllWithFilters(ctx, p.native, "", "", "", 0, "")
 		if err != nil {
 			source.UpdatedAt = reportPreviousSource(prev, id).UpdatedAt
@@ -375,6 +382,21 @@ func (s *AccountReportService) nativeRow(ctx context.Context, a *Account, platfo
 				row.Quotas = append(row.Quotas, q)
 			}
 		}
+	} else if a.Platform == PlatformAntigravity {
+		row.Locations[0].ID = "sub2api-antigravity"
+		row.Locations[0].Name = "Antigravity"
+		row.Plan = a.GetCredential("plan_type")
+		if s.usage != nil {
+			usage, err := s.usage.getAntigravityUsage(ctx, a)
+			if err != nil || usage == nil || usage.ErrorCode != "" || usage.IsForbidden {
+				row.QuotaError = true
+			} else {
+				if usage.SubscriptionTier != "" {
+					row.Plan = usage.SubscriptionTier
+				}
+				row.Quotas = reportAntigravityQuotas(usage)
+			}
+		}
 	} else {
 		row.Plan = a.GeminiTierID()
 		if s.usage != nil {
@@ -399,6 +421,22 @@ func (s *AccountReportService) nativeRow(ctx context.Context, a *Account, platfo
 }
 
 func finiteReportNumber(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 }
+
+func reportAntigravityQuotas(usage *UsageInfo) []AccountReportQuota {
+	quotas := []AccountReportQuota{}
+	for model, value := range usage.AntigravityQuota {
+		if value == nil || !strings.Contains(strings.ToLower(model), "gemini") || value.Utilization < 0 {
+			continue
+		}
+		var reset *time.Time
+		if t, err := time.Parse(time.RFC3339, value.ResetTime); err == nil {
+			reset = &t
+		}
+		quotas = append(quotas, AccountReportQuota{Key: "antigravity_model", Model: model, Unit: "percent", Percent: float64(value.Utilization), ResetAt: reset, UpdatedAt: usage.UpdatedAt})
+	}
+	sort.Slice(quotas, func(i, j int) bool { return quotas[i].Model < quotas[j].Model })
+	return quotas
+}
 
 type kiroReportCredential struct {
 	ID                  uint64 `json:"id"`
@@ -538,6 +576,7 @@ func buildAccountReport(snap accountReportSnapshot, instances []KiroReportInstan
 		for _, v := range instances {
 			r.Sources = append(r.Sources, AccountReportSource{ID: v.ID, Name: v.Name, Platform: "kiro"})
 		}
+		r.Sources = append(r.Sources, AccountReportSource{ID: "sub2api-antigravity", Name: "Antigravity", Platform: "gemini"})
 	}
 	for i := range r.Sources {
 		source := &r.Sources[i]
@@ -571,6 +610,9 @@ func buildAccountReport(snap accountReportSnapshot, instances []KiroReportInstan
 			}
 			if row.Platform == "gemini" {
 				ttl = 2 * time.Minute
+			}
+			if q.Key == "antigravity_model" {
+				ttl = 5 * time.Minute
 			}
 			q.Stale = q.Stale || allLocationsStale || q.UpdatedAt == nil || now.Sub(*q.UpdatedAt) > ttl || (q.ResetAt != nil && !now.Before(*q.ResetAt))
 		}
@@ -638,9 +680,9 @@ func buildAccountReport(snap accountReportSnapshot, instances []KiroReportInstan
 				if p == "kiro" {
 					plan = a.Plan
 				}
-				key := q.Key + ":" + plan
+				key := q.Key + ":" + plan + ":" + q.Model
 				if sums[key] == nil {
-					sums[key] = &AccountReportQuotaSummary{Key: q.Key, Plan: plan, Unit: q.Unit, Estimated: q.Estimated}
+					sums[key] = &AccountReportQuotaSummary{Key: q.Key, Model: q.Model, Plan: plan, Unit: q.Unit, Estimated: q.Estimated}
 				}
 				v := sums[key]
 				v.Count++
@@ -669,7 +711,7 @@ func buildAccountReport(snap accountReportSnapshot, instances []KiroReportInstan
 		}
 		sort.Slice(platform.Plans, func(i, j int) bool { return platform.Plans[i].Name < platform.Plans[j].Name })
 		sort.Slice(platform.Quotas, func(i, j int) bool {
-			return platform.Quotas[i].Key+platform.Quotas[i].Plan < platform.Quotas[j].Key+platform.Quotas[j].Plan
+			return platform.Quotas[i].Key+platform.Quotas[i].Plan+platform.Quotas[i].Model < platform.Quotas[j].Key+platform.Quotas[j].Plan+platform.Quotas[j].Model
 		})
 		r.Platforms = append(r.Platforms, platform)
 	}
@@ -707,10 +749,26 @@ func reportQuotaStatus(platform, status string, quotas []AccountReportQuota) str
 		return status
 	}
 	exhausted := map[string]bool{}
+	modelCount, exhaustedModels := 0, 0
 	for _, q := range quotas {
+		if q.Key == "antigravity_model" && !q.Stale {
+			modelCount++
+			if q.Percent >= 100 {
+				exhaustedModels++
+			}
+		}
 		if !q.Stale && q.Percent >= 100 {
 			exhausted[q.Key] = true
 		}
+	}
+	if modelCount > 0 {
+		if exhaustedModels == modelCount {
+			return "exhausted"
+		}
+		if exhaustedModels > 0 {
+			return "limited"
+		}
+		return status
 	}
 	if len(exhausted) == 0 {
 		return status

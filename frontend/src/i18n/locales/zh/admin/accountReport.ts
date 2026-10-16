@@ -48,11 +48,12 @@ export default {
     noAccounts: '当前没有账号数据',
     identityUncertain: '账号归属待核对，额度未计入汇总',
     quotaError: '额度查询失败，保留上次成功的结果。',
-    quotaNote: '各平台额度分别统计。GPT 使用已有上游快照；Gemini 按本站请求量和配置配额估算；Kiro 使用上游返回的额度。过期或未知额度不计入平台汇总。',
+    quotaNote: '各平台额度分别统计。GPT 使用已有上游快照；Gemini 直连按本站请求量和配置配额估算；Antigravity 渠道的 Gemini 和 Kiro 使用上游返回的额度。过期或未知额度不计入平台汇总。',
     identityNote: 'Kiro 按相同凭据或已配置的账号映射去重，同一账号的多个实例不重复累加额度。可用状态表示实例当前允许调度，不代表已通过实时请求验证。',
     status: { available: '可用', limited: '限流 / 冷却', exhausted: '额度耗尽', error: '异常', disabled: '已停用', unknown: '未知' },
     unit: { percent: '%', requests: '次', credits: '额度点' },
     quota: {
+      antigravity_model: 'Gemini 模型额度',
       gpt_5h: '5 小时窗口', gpt_7d: '7 天窗口',
       gemini_shared_daily: '共享每日请求', gemini_pro_daily: 'Pro 每日请求', gemini_flash_daily: 'Flash 每日请求',
       gemini_shared_minute: '共享每分钟请求', gemini_pro_minute: 'Pro 每分钟请求', gemini_flash_minute: 'Flash 每分钟请求',

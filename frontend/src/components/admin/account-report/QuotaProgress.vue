@@ -2,7 +2,7 @@
   <div class="space-y-1" :class="{ 'opacity-60': stale }" data-testid="quota-progress">
     <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
       <span class="text-gray-500 dark:text-gray-400">
-        {{ t(`admin.accountReport.quota.${quota.key}`) }}
+        {{ quota.model || t(`admin.accountReport.quota.${quota.key}`) }}
         <span v-if="quota.estimated" class="ml-1">· {{ t('admin.accountReport.estimated') }}</span>
       </span>
       <span class="font-medium tabular-nums" :class="stale ? 'text-gray-400' : 'text-gray-900 dark:text-gray-100'">
@@ -10,7 +10,7 @@
         <span v-if="stale"> · {{ t('admin.accountReport.stale') }}</span>
       </span>
     </div>
-    <div role="progressbar" :aria-label="t(`admin.accountReport.quota.${quota.key}`)" :aria-valuenow="Math.min(100, quota.percent)" aria-valuemin="0" aria-valuemax="100" class="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-dark-700">
+    <div role="progressbar" :aria-label="quota.model || t(`admin.accountReport.quota.${quota.key}`)" :aria-valuenow="Math.min(100, quota.percent)" aria-valuemin="0" aria-valuemax="100" class="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-dark-700">
       <div class="h-full rounded-full transition-all" :class="stale ? 'bg-gray-400' : quota.percent >= 100 ? 'bg-red-500' : quota.percent >= 80 ? 'bg-amber-500' : 'bg-primary-500'" :style="{ width: `${Math.min(100, Math.max(0, quota.percent))}%` }" />
     </div>
     <div v-if="quota.used !== null && quota.limit !== null" class="text-xs tabular-nums text-gray-500 dark:text-gray-400">

@@ -6,6 +6,8 @@ GPT / Gemini 从当前 Sub2API 数据库读取，每分钟采集一次。影子�
 
 ## Kiro 配置
 
+Gemini 汇总包含直接 Gemini 账号和 Antigravity 渠道账号。Antigravity 复用现有上游额度查询，只展示 Gemini 模型的使用率和重置时间，按模型分别计算账号平均值；不把 Claude 等其他模型的配额计入 Gemini。查询不修改账号配置、启停状态或刷新凭据。
+
 设置环境变量 `ACCOUNT_REPORT_KIRO_INSTANCES_FILE=/app/data/kiro-report-instances.json`，或配置：
 
 ```yaml

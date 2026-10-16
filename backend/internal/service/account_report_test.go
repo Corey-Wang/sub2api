@@ -155,6 +155,29 @@ func TestAccountReportEmptyAndInvalidResponses(t *testing.T) {
 	require.False(t, r.Complete)
 }
 
+func TestAccountReportAntigravityGeminiChannel(t *testing.T) {
+	now := time.Now().UTC()
+	usage := &AccountUsageService{antigravityQuotaFetcher: &AntigravityQuotaFetcher{}, cache: NewUsageCache()}
+	usage.cache.antigravityCache.Store(int64(7), &antigravityUsageCache{timestamp: now, usageInfo: &UsageInfo{UpdatedAt: &now, SubscriptionTier: "PRO", AntigravityQuota: map[string]*AntigravityModelQuota{
+		"gemini-pro":    {Utilization: 100, ResetTime: now.Add(time.Hour).Format(time.RFC3339)},
+		"gemini-flash":  {Utilization: 25, ResetTime: now.Add(time.Hour).Format(time.RFC3339)},
+		"claude-sonnet": {Utilization: 90},
+	}}})
+	s := &AccountReportService{usage: usage, repo: accountReportFixtureReader{rows: map[string][]Account{PlatformAntigravity: {{ID: 7, Name: "Antigravity account", Platform: PlatformAntigravity, Type: AccountTypeOAuth, Status: "active", Schedulable: true, Credentials: map[string]any{"access_token": "fixture-never-transmitted"}}}}}}
+	r := buildAccountReport(s.collect(context.Background(), accountReportSnapshot{}, now), nil, now)
+	require.Equal(t, 1, r.Platforms[1].Counts.Total)
+	require.Len(t, r.Accounts[0].Quotas, 2)
+	require.Equal(t, "limited", r.Accounts[0].Status)
+	require.Equal(t, "Antigravity", r.Accounts[0].Locations[0].Name)
+	require.Len(t, r.Platforms[1].Quotas, 2)
+	require.Equal(t, "gemini-flash", r.Platforms[1].Quotas[0].Model)
+	require.Equal(t, 25.0, r.Platforms[1].Quotas[0].Percent)
+	require.Equal(t, "PRO", r.Accounts[0].Plan)
+	data, _ := json.Marshal(r)
+	require.NotContains(t, string(data), "claude-sonnet")
+	require.NotContains(t, string(data), "fixture-never-transmitted")
+}
+
 func TestAccountReportModelAndMinuteQuotaExhaustion(t *testing.T) {
 	pro := AccountReportQuota{Key: "gemini_pro_daily", Percent: 100}
 	flash := AccountReportQuota{Key: "gemini_flash_daily", Percent: 100}

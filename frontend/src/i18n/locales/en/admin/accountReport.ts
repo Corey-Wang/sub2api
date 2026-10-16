@@ -22,11 +22,12 @@ export default {
     statusLabel: 'Status', progress: 'Quota progress / reset time', allPlatforms: 'All platforms', allPlans: 'All plans', allInstances: 'All instances', allStatuses: 'All statuses',
     noMatches: 'No matching accounts', noAccounts: 'No account data yet', identityUncertain: 'Identity needs review; quota excluded from totals',
     quotaError: 'Quota query failed. The last successful observation is retained.',
-    quotaNote: 'Quotas are reported separately by platform. GPT uses existing upstream observations; Gemini estimates from local requests and configured limits; Kiro uses upstream quotas. Unknown and outdated quotas are excluded from platform totals.',
+    quotaNote: 'Quotas are reported separately by platform. GPT uses existing observations; direct Gemini estimates from local requests and configured limits; Gemini through Antigravity and Kiro use upstream quotas. Unknown and outdated quotas are excluded from totals.',
     identityNote: 'Kiro is deduplicated by matching credentials or configured account mappings. Quotas are counted once across instances. Available means the instance permits scheduling, not that a live request has been verified.',
     status: { available: 'Available', limited: 'Rate limited / cooling down', exhausted: 'Quota exhausted', error: 'Error', disabled: 'Disabled', unknown: 'Unknown' },
     unit: { percent: '%', requests: 'requests', credits: 'credits' },
     quota: {
+      antigravity_model: 'Gemini model quota',
       gpt_5h: '5-hour window', gpt_7d: '7-day window',
       gemini_shared_daily: 'Shared daily requests', gemini_pro_daily: 'Pro daily requests', gemini_flash_daily: 'Flash daily requests',
       gemini_shared_minute: 'Shared requests per minute', gemini_pro_minute: 'Pro requests per minute', gemini_flash_minute: 'Flash requests per minute',

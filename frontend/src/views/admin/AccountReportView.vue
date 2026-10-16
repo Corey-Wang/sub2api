@@ -38,7 +38,7 @@
               <span v-for="plan in p.plans" :key="plan.name" class="rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-600 dark:bg-dark-700 dark:text-gray-300">{{ planName(plan.name) }} · {{ plan.count }}</span>
             </div>
             <div v-if="p.quotas.some(q => !q.key.endsWith('_minute'))" class="space-y-4 border-t border-gray-100 pt-4 dark:border-dark-700">
-              <div v-for="q in p.quotas.filter(q => !q.key.endsWith('_minute'))" :key="q.key + q.plan">
+              <div v-for="q in p.quotas.filter(q => !q.key.endsWith('_minute'))" :key="q.key + q.plan + q.model">
                 <p v-if="q.plan" class="mb-1 text-xs font-medium">{{ planName(q.plan) }}</p>
                 <QuotaProgress :quota="q" />
               </div>
@@ -110,7 +110,7 @@
                   </div></td>
                   <td class="px-4 py-4"><span class="whitespace-nowrap rounded-md px-2 py-1 text-xs" :class="statusClass(a.status)">{{ t(`admin.accountReport.status.${a.status}`) }}</span></td>
                   <td class="space-y-4 px-4 py-4">
-                    <QuotaProgress v-for="q in a.quotas" :key="q.key" :quota="q" />
+                    <QuotaProgress v-for="q in a.quotas" :key="q.key + q.model" :quota="q" />
                     <p v-if="!a.quotas.length" class="text-xs text-gray-400">{{ t('admin.accountReport.noQuota') }}</p>
                     <p v-if="a.quota_error" class="text-xs text-amber-600">{{ t('admin.accountReport.quotaError') }}</p>
                   </td>
