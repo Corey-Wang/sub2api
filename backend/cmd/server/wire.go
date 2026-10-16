@@ -82,6 +82,7 @@ func providePluginHostInfo(buildInfo handler.BuildInfo) service.PluginHostInfo {
 }
 
 func provideCleanup(
+	accountReport *service.AccountReportService,
 	entClient *ent.Client,
 	rdb redis.UniversalClient,
 	opsMetricsCollector *service.OpsMetricsCollector,
@@ -143,6 +144,7 @@ func provideCleanup(
 
 		// 应用层清理步骤可并行执行，基础设施资源（Redis/Ent）最后按顺序关闭。
 		parallelSteps := []cleanupStep{
+			{"AccountReportService", func() error { accountReport.Stop(); return nil }},
 			{"PluginManager", func() error {
 				if pluginManager != nil {
 					pluginManager.Stop()

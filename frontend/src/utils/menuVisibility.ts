@@ -1,5 +1,6 @@
 /** Menu presentation only: hiding an entry never disables its route or API. */
 export const CONFIGURABLE_MENUS = [
+  {"id": "account_report", "label": "admin.accountReport.title", "paths": ["/admin/account-report"], "group": "admin"},
   {"id": "admin_dashboard", "label": "nav.dashboard", "paths": ["/admin/dashboard"], "group": "admin"},
   {"id": "ops", "label": "nav.ops", "paths": ["/admin/ops"], "group": "admin"},
   {"id": "users", "label": "nav.users", "paths": ["/admin/users"], "group": "admin"},

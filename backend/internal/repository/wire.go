@@ -65,6 +65,7 @@ func ProvideSchedulerCache(rdb redis.UniversalClient, cfg *config.Config) servic
 
 // ProviderSet is the Wire provider set for all repositories
 var ProviderSet = wire.NewSet(
+	NewAccountReportCache,
 	NewUserRepository,
 	NewAPIKeyRepository,
 	NewGroupRepository,

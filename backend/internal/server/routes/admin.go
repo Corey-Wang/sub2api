@@ -36,6 +36,7 @@ func RegisterAdminRoutes(
 
 		// 仪表盘
 		registerDashboardRoutes(admin, h)
+		admin.GET("/account-report", h.Admin.AccountReport.Get)
 
 		// 用户管理
 		registerUserManagementRoutes(admin, h)

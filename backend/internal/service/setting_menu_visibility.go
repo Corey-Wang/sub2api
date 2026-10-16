@@ -8,6 +8,7 @@ import (
 
 // These IDs cover built-in navigation and preserve the original five switches.
 var configurableMenuIDs = map[string]struct{}{
+	"account_report":       {},
 	"onboarding":           {},
 	"admin_dashboard":      {},
 	"ops":                  {},

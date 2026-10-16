@@ -1,4 +1,5 @@
 import overview from './overview'
+import accountReport from './accountReport'
 import channels from './channels'
 import accounts from './accounts'
 import resources from './resources'
@@ -9,6 +10,7 @@ import promptAudit from './promptAudit'
 import plugins from './plugins'
 
 export default {
+  ...accountReport,
   ...overview,
   ...channels,
   ...accounts,

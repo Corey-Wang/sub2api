@@ -213,6 +213,11 @@ security:
     allow_direct_on_error: false
 
 # =============================================================================
+# Read-only account report. External Kiro instance configuration stays in a private file.
+# Also configurable with ACCOUNT_REPORT_KIRO_INSTANCES_FILE.
+account_report:
+  kiro_instances_file: ""
+
 # Gateway Configuration
 # 网关配置
 # =============================================================================

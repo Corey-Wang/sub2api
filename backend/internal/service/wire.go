@@ -221,6 +221,15 @@ func ProvideOpenAIQuotaAutoResetService(
 	return service
 }
 
+func ProvideAccountReportService(repo AccountRepository, usage *AccountUsageService, cache AccountReportCache, cfg *config.Config) (*AccountReportService, error) {
+	svc, err := NewAccountReportService(repo, usage, cache, cfg)
+	if err != nil {
+		return nil, err
+	}
+	svc.Start()
+	return svc, nil
+}
+
 func ProvideAccountUsageService(
 	accountRepo AccountRepository,
 	usageLogRepo UsageLogRepository,
@@ -856,6 +865,7 @@ func ProvideAPIKeyService(
 
 // ProviderSet is the Wire provider set for all services
 var ProviderSet = wire.NewSet(
+	ProvideAccountReportService,
 	// Core services
 	ProvideAuthService,
 	NewPasskeyService,
