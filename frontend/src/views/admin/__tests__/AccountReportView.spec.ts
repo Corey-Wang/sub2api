@@ -13,7 +13,10 @@ const now = '2026-10-16T02:00:00Z'
 const fixture: AccountReport = {
   updated_at: now, pending: false, complete: false, counts,
   sources: [{ id: 'kiro-a', name: 'Kiro A', platform: 'kiro', updated_at: now, attempted_at: now, error: '', stale: false }, { id: 'sub2api-gpt', name: 'Sub2API', platform: 'gpt', updated_at: now, attempted_at: now, error: 'source_unavailable', stale: true }],
-  platforms: ['gpt', 'gemini', 'kiro'].map(platform => ({ platform: platform as 'gpt' | 'gemini' | 'kiro', counts, plans: [{ name: 'Pro', count: 1 }], quotas: [] })),
+  platforms: ['gpt', 'gemini', 'kiro'].map(platform => ({
+    platform: platform as 'gpt' | 'gemini' | 'kiro', counts, plans: [{ name: 'Pro', count: 1 }],
+    quotas: platform === 'kiro' ? [{ key: 'kiro_credits', plan: 'Pro', unit: 'credits' as const, count: 1, used: 100, limit: 100, percent: 100, estimated: false }] : []
+  })),
   accounts: [
     { id: 'kiro:1', platform: 'kiro', name: 'pro@example.test', plan: 'Pro', type: 'social', status: 'exhausted', quota_error: false, identity_uncertain: false, locations: [{ id: 'kiro-a', name: 'Kiro A', account_id: '1', status: 'available', updated_at: now, stale: false }], quotas: [{ key: 'kiro_credits', unit: 'credits', used: 100, limit: 100, percent: 100, reset_at: '2026-11-01T00:00:00Z', updated_at: now, estimated: false, stale: false }] },
     { id: 'gpt:1', platform: 'gpt', name: 'GPT account', plan: 'Plus', type: 'oauth', status: 'unknown', quota_error: true, identity_uncertain: false, locations: [{ id: 'sub2api-gpt', name: 'Sub2API', account_id: '1', status: 'available', updated_at: now, stale: true }], quotas: [{ key: 'gpt_5h', unit: 'percent', used: null, limit: null, percent: 75, reset_at: null, updated_at: now, estimated: false, stale: true }] }
@@ -31,32 +34,28 @@ beforeEach(() => { vi.mocked(getAccountReport).mockReset(); vi.mocked(getAccount
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; vi.useRealTimers() })
 
 describe('AccountReportView', () => {
-  it('shows platform summaries, source failures and stale observations without management controls', async () => {
+  it('shows platform summaries, quota progress and source failures without management controls', async () => {
     const w = render(); await flushPromises()
     expect(w.get('[data-testid="report-totals"]').text()).toContain('已知账号总数')
     expect(w.text()).toContain('部分来源尚未同步或采集失败')
-    expect(w.findAll('[data-testid="report-account-row"]')).toHaveLength(2)
-    expect(w.text()).toContain('75.0%')
-    expect(w.text()).toContain('已过期')
-    expect(w.text()).toContain('100 / 100 额度点')
+    expect(w.get('[data-testid="platform-kiro"]').text()).toContain('100.0%')
+    expect(w.get('[data-testid="platform-kiro"]').text()).toContain('100 / 100 额度点')
+    expect(w.text()).toContain('汇总 1 个账号的有效额度')
+    expect(w.text()).toContain('GPT · Sub2API采集失败')
     expect(w.find('button[data-action="delete"]').exists()).toBe(false)
     expect(w.find('iframe').exists()).toBe(false)
   })
 
-  it('combines platform, plan, instance, status and search filters and clears them', async () => {
+  it('only displays aggregates even when the report contains individual account details', async () => {
     const w = render(); await flushPromises()
-    await w.get('[data-testid="platform-kiro"]').trigger('click')
-    expect(w.findAll('[data-testid="report-account-row"]')).toHaveLength(1)
-    await w.get('[data-testid="report-plan-filter"]').setValue('Pro')
-    await w.get('[data-testid="report-instance-filter"]').setValue('kiro-a')
-    await w.get('[data-testid="report-status-filter"]').setValue('exhausted')
-    await w.get('[data-testid="report-search"]').setValue('pro@')
-    expect(w.findAll('[data-testid="report-account-row"]')).toHaveLength(1)
-    await w.get('[data-testid="report-search"]').setValue('not found')
-    expect(w.text()).toContain('没有符合条件的账号')
-    const clear = w.findAll('button').find(button => button.text() === '清除筛选')!
-    await clear.trigger('click')
-    expect(w.findAll('[data-testid="report-account-row"]')).toHaveLength(2)
+    for (const account of fixture.accounts) expect(w.text()).not.toContain(account.name)
+    expect(w.text()).not.toContain('账号明细')
+    expect(w.findAll('table, input, select, [data-testid="report-account-row"]')).toHaveLength(0)
+    for (const platform of fixture.platforms) {
+      const card = w.get(`[data-testid="platform-${platform.platform}"]`)
+      expect(card.element.tagName).toBe('DIV')
+      expect(card.attributes('aria-pressed')).toBeUndefined()
+    }
   })
 
   it('refreshes the cached report every minute and retains data after a read failure', async () => {
@@ -66,16 +65,20 @@ describe('AccountReportView', () => {
     await vi.advanceTimersByTimeAsync(60000); await flushPromises()
     expect(getAccountReport).toHaveBeenCalledTimes(2)
     expect(w.get('[role="alert"]').text()).toContain('报表读取失败')
-    expect(w.findAll('[data-testid="report-account-row"]')).toHaveLength(2)
+    expect(w.get('[data-testid="report-totals"]').text()).toContain('已知账号总数2')
+    expect(w.get('[data-testid="platform-kiro"]').text()).toContain('100 / 100 额度点')
     w.unmount(); wrapper = undefined
     await vi.advanceTimersByTimeAsync(120000)
     expect(getAccountReport).toHaveBeenCalledTimes(2)
   })
 
   it('shows an empty instance without inventing quota progress', async () => {
-    vi.mocked(getAccountReport).mockResolvedValue({ ...fixture, complete: true, accounts: [], platforms: fixture.platforms.map(p => ({ ...p, plans: [], quotas: [] })) })
+    const emptyCounts = { total: 0, available: 0, error: 0, limited: 0, disabled: 0, exhausted: 0, unknown: 0, unknown_quota: 0, near_limit: 0, identity_uncertain: 0 }
+    vi.mocked(getAccountReport).mockResolvedValue({ ...fixture, complete: true, counts: emptyCounts, accounts: [], platforms: fixture.platforms.map(p => ({ ...p, counts: emptyCounts, plans: [], quotas: [] })) })
     const w = render(); await flushPromises()
-    expect(w.text()).toContain('当前没有账号数据')
+    expect(w.get('[data-testid="report-totals"]').text()).toContain('已知账号总数0')
+    expect(w.get('[data-testid="platform-kiro"]').text()).toContain('0 个账号')
+    expect(w.text()).toContain('暂无有效额度数据')
     expect(w.findAll('[role="progressbar"]')).toHaveLength(0)
   })
 })
