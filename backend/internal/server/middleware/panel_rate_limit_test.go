@@ -210,6 +210,10 @@ func TestPanelRateLimiterAdminExemption(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		require.Equal(t, http.StatusOK, performPanelRequest(admin, "127.0.0.1:1000").Code)
 	}
+	readOnlyAdmin := newPanelTestRouter(p.Global(), &panelTestIdentity{userID: 10, role: service.RoleReadOnlyAdmin})
+	for i := 0; i < 5; i++ {
+		require.Equal(t, http.StatusOK, performPanelRequest(readOnlyAdmin, "127.0.0.1:1000").Code)
+	}
 
 	// 豁免关闭：管理员一样受限
 	p2 := &PanelRateLimiter{
@@ -219,6 +223,9 @@ func TestPanelRateLimiterAdminExemption(t *testing.T) {
 	admin2 := newPanelTestRouter(p2.Global(), &panelTestIdentity{userID: 9, role: service.RoleAdmin})
 	require.Equal(t, http.StatusOK, performPanelRequest(admin2, "127.0.0.1:1000").Code)
 	require.Equal(t, http.StatusTooManyRequests, performPanelRequest(admin2, "127.0.0.1:1000").Code)
+	readOnlyAdmin2 := newPanelTestRouter(p2.Global(), &panelTestIdentity{userID: 10, role: service.RoleReadOnlyAdmin})
+	require.Equal(t, http.StatusOK, performPanelRequest(readOnlyAdmin2, "127.0.0.1:1000").Code)
+	require.Equal(t, http.StatusTooManyRequests, performPanelRequest(readOnlyAdmin2, "127.0.0.1:1000").Code)
 }
 
 func TestPanelRateLimiterDisabledOrMissingSubject(t *testing.T) {
